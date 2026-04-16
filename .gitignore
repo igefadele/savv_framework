@@ -1,5 +1,5 @@
 .env,
-.DevDocs/,
-storage/,
-.vscode/,
+/.DevDocs,
+/storage/*,
+/.vscode,
 
