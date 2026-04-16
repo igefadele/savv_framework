@@ -10,7 +10,7 @@ If you want to start a new Savo application quickly, use **Savo Starter**, which
 
 ## Package Model
 
-Savo is now split into two parts:
+Savo is split into two parts:
 
 ### 1. Savo Framework
 
@@ -76,7 +76,7 @@ If you need a deeply layered enterprise framework with a large built-in ecosyste
 
 ### Install via Packagist
 
-Once published on Packagist, developers will be able to install Savo Framework with:
+Install Savo Framework with:
 
 ```bash
 composer require savadub/savo
@@ -179,9 +179,6 @@ vendor/
     savo/
 ```
 
-The framework is no longer expected to exist as a root-level `savo/` folder inside the user project.
-
-Instead, it is installed as a Composer dependency and loaded from `vendor/`.
 
 ## Developer Experience
 
@@ -198,17 +195,6 @@ Developers can expect:
 
 The framework is intentionally designed so that someone coming from Laravel-like conventions can feel comfortable, while someone with no prior framework experience can still understand what is going on.
 
-## Versioning and Distribution
-
-Because Savo Framework is now a standalone package:
-
-- it can be versioned independently
-- it can be published to Packagist
-- it can be required in multiple starter apps or projects
-- framework updates can be distributed through Composer
-- starter projects can remain focused on application code
-
-This makes maintenance cleaner for both framework contributors and end users.
 
 ## Philosophy
 
