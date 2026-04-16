@@ -18,8 +18,8 @@ class Application {
 
     public function run() {
         // Load user routes from their project directory
-        if (file_exists(ROOT_PATH . '/routes/api.php')) require ROOT_PATH . '/routes/api.php';
-        if (file_exists(ROOT_PATH . '/routes/web.php')) require ROOT_PATH . '/routes/web.php';
+        $this->loadRoutes();
+        $this->registerRedirections();
 
         $request = Request::capture();
         $handled = Router::getInstance()->dispatch($request);
@@ -36,5 +36,27 @@ class Application {
             http_response_code(404);
             echo "404 - Page Not Found";
         }
+    }
+
+    protected function registerRedirections() 
+    {
+        // Use your existing config utility to pull the array
+        $redirects = config('redirections') ?? [];
+        $router = Router::getInstance();
+
+        foreach ($redirects as $slug => $target) {
+            $router->get($slug, function() use ($target) {
+                // Handle both string URLs and detailed arrays
+                $url = is_array($target) ? $target['url'] : $target;
+                $status = is_array($target) ? ($target['status'] ?? 302) : 302;
+
+                return response()->redirect($url, $status);
+            });
+        }
+    }
+    
+    protected function loadRoutes() {
+        if (file_exists(ROOT_PATH . '/routes/api.php')) require ROOT_PATH . '/routes/api.php';
+        if (file_exists(ROOT_PATH . '/routes/web.php')) require ROOT_PATH . '/routes/web.php';
     }
 }

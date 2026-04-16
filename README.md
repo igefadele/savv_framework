@@ -25,6 +25,7 @@ It provides the core runtime and utilities such as:
 - config loading
 - validation
 - logging
+- built-in url redirection
 - helper functions
 - other core framework behavior
 
@@ -477,6 +478,23 @@ What it does:
 - Sends the message through PHPMailer using SMTP config
 - Logs failures to `storage/logs`
 - Returns JSON responses for frontend handling
+
+
+## Pretty Links (Redirections)
+
+Savo supports built-in URL redirections. 
+You need to create a `configs/redirections.php` file to manage your short-links.
+
+```php
+return [
+    'fb' => '[https://facebook.com/savadub](https://facebook.com/savadub)',
+    'custom' => ['url' => '[https://example.com](https://example.com)', 'status' => 301],
+];
+
+```
+
+Any request to yourdomain.com/fb will now automatically redirect to the destination.
+
 
 ## Views and Layouts
 
