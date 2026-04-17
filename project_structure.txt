@@ -1,6 +1,7 @@
 .
 ./project_structure.txt
 ./README.md
+./full_codebase.txt
 ./composer.json
 ./vendor
 ./vendor/phpoption
@@ -68,7 +69,11 @@
 ./src/Utils/Request.php
 ./src/Utils/Router.php
 ./src/Utils/Log.php
+./src/Controllers
+./src/Controllers/SystemController.php
+./src/routes
 ./src/Helpers
+./src/Helpers/routes.php
 ./src/Helpers/helpers.php
 ./src/Console
 ./src/Console/Commands

@@ -92,12 +92,19 @@ class Router
     }
 
     /**
-     * Scans the routes directory and loads every PHP file found.
+     * Load internal package route and also scans the routes directory and loads every PHP file found.
      */
     public function loadRouteFiles(): void
-    {
+    {   
+        // 1. Load Internal Framework Routes (PWA, Manifest, etc.)
+        // We use __DIR__ to go from src/Utils/ to src/Helpers/
+        $internalRoutes = dirname(__DIR__) . '/Helpers/routes.php';
+        if (file_exists($internalRoutes)) {
+            require_once $internalRoutes;
+        }
+        
+        // 2. Load User/Project Routes
         $routeDir = ROOT_PATH . '/routes';
-
         if (is_dir($routeDir)) {
             $files = glob($routeDir . '/*.php');
             foreach ($files as $file) {

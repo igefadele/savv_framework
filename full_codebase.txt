@@ -725,12 +725,19 @@ class Router
     }
 
     /**
-     * Scans the routes directory and loads every PHP file found.
+     * Load internal package route and also scans the routes directory and loads every PHP file found.
      */
     public function loadRouteFiles(): void
-    {
+    {   
+        // 1. Load Internal Framework Routes (PWA, Manifest, etc.)
+        // We use __DIR__ to go from src/Utils/ to src/Helpers/
+        $internalRoutes = dirname(__DIR__) . '/Helpers/routes.php';
+        if (file_exists($internalRoutes)) {
+            require_once $internalRoutes;
+        }
+        
+        // 2. Load User/Project Routes
         $routeDir = ROOT_PATH . '/routes';
-
         if (is_dir($routeDir)) {
             $files = glob($routeDir . '/*.php');
             foreach ($files as $file) {
@@ -1143,6 +1150,122 @@ class Log
 }
 
 
+--- FILE: ./src/Controllers/SystemController.php ---
+
+<?php 
+
+namespace Savv\Controllers;
+
+class SystemController 
+{
+    public function getManifestFile() {
+        header('Content-Type: application/json');
+        $pwa = config('pwa');
+
+        // We filter the config so we only echo valid Manifest keys
+        $manifest = [
+            "name"             => $pwa['name'] ?? 'Savv App',
+            "short_name"       => $pwa['short_name'] ?? 'Savv',
+            "description"      => $pwa['description'] ?? '',
+            "id"               => "./",
+            "start_url"        => "./",
+            "scope"            => "./",
+            "display"          => $pwa['display'] ?? "standalone",
+            "display_override" => ["standalone", "browser"],
+            "orientation"      => "portrait-primary",
+            "background_color" => $pwa['background_color'] ?? "#ffffff",
+            "theme_color"      => $pwa['theme_color'] ?? "#000000",
+            "icons"            => $pwa['icons'] ?? []
+        ];
+
+        echo json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
+    public function getServiceWorkerFile() {
+        header('Content-Type: application/javascript');
+        $config = config('pwa');
+        $cacheName = strtolower($config['short_name']) . '-cache-' . $config['version'];
+        $precache = json_encode($config['precache']);
+        ?>
+const CACHE_NAME = '<?= $cacheName ?>';
+const OFFLINE_URL = '/offline';
+const PRECACHE_URLS = <?= $precache ?>;
+
+self.addEventListener('install', (event) => {
+event.waitUntil((async () => {
+const cache = await caches.open(CACHE_NAME);
+await cache.addAll(PRECACHE_URLS);
+await self.skipWaiting();
+})());
+});
+
+self.addEventListener('activate', (event) => {
+event.waitUntil((async () => {
+const cacheNames = await caches.keys();
+await Promise.all(
+cacheNames.filter(name => name !== CACHE_NAME)
+.map(name => caches.delete(name))
+);
+await self.clients.claim();
+})());
+});
+
+self.addEventListener('fetch', (event) => {
+if (event.request.method !== 'GET') return;
+
+const requestUrl = new URL(event.request.url);
+const isSameOrigin = requestUrl.origin === self.location.origin;
+
+if (event.request.mode === 'navigate') {
+event.respondWith((async () => {
+try {
+const networkResponse = await fetch(event.request);
+const cache = await caches.open(CACHE_NAME);
+cache.put(event.request, networkResponse.clone());
+return networkResponse;
+} catch (error) {
+const cachedResponse = await caches.match(event.request);
+return cachedResponse || caches.match(OFFLINE_URL);
+}
+})());
+return;
+}
+
+if (!isSameOrigin) return;
+
+event.respondWith((async () => {
+const cachedResponse = await caches.match(event.request);
+if (cachedResponse) return cachedResponse;
+
+try {
+const networkResponse = await fetch(event.request);
+if (networkResponse.ok) {
+const cache = await caches.open(CACHE_NAME);
+cache.put(event.request, networkResponse.clone());
+}
+return networkResponse;
+} catch (error) {
+return null;
+}
+})());
+});
+<?php
+        exit;
+    }
+}
+
+--- FILE: ./src/Helpers/routes.php ---
+
+<?php
+use Savv\Controllers\SystemController;
+
+// Route for manifest.json
+router()->get('manifest.json', [SystemController::class, 'getManifestFile']);
+
+// sw.js Route (With your specific origin and navigate logic)
+router()->get('sw.js', [SystemController::class, 'getServiceWorkerFile']);
+
 --- FILE: ./src/Helpers/helpers.php ---
 
 <?php 
@@ -1279,6 +1402,76 @@ if (!function_exists('logger')) {
 }
 
 
+/**
+ * Injects PWA meta tags and manifest link into the <head>.
+ */
+function savv_pwa_head() {
+    $config = config('pwa');
+    echo '<link rel="manifest" href="/manifest.json">' . PHP_EOL;
+    echo '<meta name="theme-color" content="' . ($config['theme_color'] ?? '#000000') . '">' . PHP_EOL;
+    echo '<meta name="mobile-web-app-capable" content="yes">' . PHP_EOL;
+    echo '<meta name="apple-mobile-web-app-capable" content="yes">' . PHP_EOL;
+    echo '<meta name="apple-mobile-web-app-status-bar-style" content="default">' . PHP_EOL;
+    echo '<link rel="apple-touch-icon" href="' . ($config['icons'][0]['src'] ?? '') . '">' . PHP_EOL;
+}
+
+/**
+ * Injects the Service Worker registration script.
+ */
+function savv_pwa_footer() {
+    echo '<script>
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("/sw.js", { scope: "/" })
+                    .then(reg => console.log("Service Worker Registered"))
+                    .catch(err => console.log("Service Worker Registration Failed", err));
+            });
+
+            navigator.serviceWorker.addEventListener("controllerchange", () => {
+                console.log("New version available, reloading...");
+                window.location.reload();
+            });
+        }
+    </script>' . PHP_EOL;
+}
+
+/**
+ * Injects the Service Worker registration assets and script at once in the head.
+ */
+function savv_pwa_init() {
+    $config = config('pwa');
+    $theme = $config['theme_color'] ?? '#000000';
+    
+    // 1. Meta Tags for Head
+    $html = '' . PHP_EOL;
+    $html .= '<link rel="manifest" href="/manifest.json">' . PHP_EOL;
+    $html .= '<meta name="theme-color" content="'.$theme.'">' . PHP_EOL;
+    $html .= '<meta name="mobile-web-app-capable" content="yes">' . PHP_EOL;
+    $html .= '<meta name="apple-mobile-web-app-capable" content="yes">' . PHP_EOL;
+    $html .= '<meta name="apple-mobile-web-app-status-bar-style" content="default">' . PHP_EOL;
+    $html .= '<link rel="apple-touch-icon" href="' . ($config['icons'][0]['src'] ?? '') . '">' . PHP_EOL;
+
+    // 2. Registration Script
+    $html .= '<script>
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+            navigator.serviceWorker.register("/sw.js", {
+                    scope: "/"
+                })
+                .then(reg => console.log("' . $config['short_name'] . ' Service Worker Registered"))
+                .catch(err => console.log("Service Worker Registration Failed", err));
+        });
+
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+            console.log("New version available, reloading...");
+            window.location.reload();
+        });
+    }
+    </script>' . PHP_EOL;
+
+    echo $html;
+}
+
 --- FILE: ./src/Console/Commands/MakeController.php ---
 
 <?php
@@ -1411,7 +1604,7 @@ class RouteCache
             $uri = trim($relative, '/');
             $uri = ($uri === 'index') ? '/' : $uri;
 
-            // Pass a "View Marker" instead of a Closure 
+            // I use a "View Marker" instead of a Closure 
             $router->get($uri, ['__savv_view' => $file->getPathname()]);
         }
     }
@@ -1419,7 +1612,7 @@ class RouteCache
     protected function compileRedirections($router) {
         $redirects = config('redirections') ?? [];  
         foreach ($redirects as $slug => $target) {
-            // Use a marker that tells the Router this is a redirection
+            // A marker that tells the Router this is a redirection
             $router->get($slug, [
                 '__savv_type' => 'redirect',
                 'url' => is_array($target) ? $target['url'] : $target,

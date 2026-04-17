@@ -19,7 +19,8 @@
             "Savv\\": "src/"
         },
         "files": [
-            "src/Helpers/helpers.php"
+            "src/Helpers/helpers.php",
+            "src/Helpers/routes.php"
         ]
     },
     "minimum-stability": "stable"

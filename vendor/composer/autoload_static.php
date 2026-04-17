@@ -10,7 +10,8 @@ class ComposerStaticInit57274eaa4aa087b1b60f792066c1f91a
         '320cde22f66dd4f5d3fd621d3e88b98f' => __DIR__ . '/..' . '/symfony/polyfill-ctype/bootstrap.php',
         '0e6d7bf4a5811bfa5cf40c5ccd6fae6a' => __DIR__ . '/..' . '/symfony/polyfill-mbstring/bootstrap.php',
         'a4a119a56e50fbb293281d9a48007e0e' => __DIR__ . '/..' . '/symfony/polyfill-php80/bootstrap.php',
-        'd3d8db24d7913fd3e9a0de7ae55fe31f' => __DIR__ . '/../..' . '/savo/Helpers/helpers.php',
+        '0d0c35aaa2a61c572d2457a5cb069e58' => __DIR__ . '/../..' . '/src/Helpers/helpers.php',
+        'b2a45922b0573e03f847b9fb60924488' => __DIR__ . '/../..' . '/src/Helpers/routes.php',
     );
 
     public static $prefixLengthsPsr4 = array (
@@ -24,7 +25,6 @@ class ComposerStaticInit57274eaa4aa087b1b60f792066c1f91a
         'P' => 
         array (
             'PhpOption\\' => 10,
-            'PHPMailer\\PHPMailer\\' => 20,
         ),
         'G' => 
         array (
@@ -33,10 +33,6 @@ class ComposerStaticInit57274eaa4aa087b1b60f792066c1f91a
         'D' => 
         array (
             'Dotenv\\' => 7,
-        ),
-        'A' => 
-        array (
-            'App\\' => 4,
         ),
     );
 
@@ -55,15 +51,11 @@ class ComposerStaticInit57274eaa4aa087b1b60f792066c1f91a
         ),
         'Savv\\' => 
         array (
-            0 => __DIR__ . '/../..' . '/savo',
+            0 => __DIR__ . '/../..' . '/src',
         ),
         'PhpOption\\' => 
         array (
             0 => __DIR__ . '/..' . '/phpoption/phpoption/src/PhpOption',
-        ),
-        'PHPMailer\\PHPMailer\\' => 
-        array (
-            0 => __DIR__ . '/..' . '/phpmailer/phpmailer/src',
         ),
         'GrahamCampbell\\ResultType\\' => 
         array (
@@ -72,10 +64,6 @@ class ComposerStaticInit57274eaa4aa087b1b60f792066c1f91a
         'Dotenv\\' => 
         array (
             0 => __DIR__ . '/..' . '/vlucas/phpdotenv/src',
-        ),
-        'App\\' => 
-        array (
-            0 => __DIR__ . '/../..' . '/app',
         ),
     );
 
