@@ -312,56 +312,110 @@ class Router
      *
      * @param Request $request Current HTTP request instance.
      * @return mixed Returns the route result, `true` for handled non-response routes, or `false` when no route matches.
-     */
+     */  
     public function dispatch(Request $request)
     {
         $method = $request->method();
-        // Trim slashes to ensure 'api/contact' matches 'api/contact/'
         $path = trim($request->path(), '/');
 
-        foreach ($this->routes as $route) {
-            // Check method and regex match
-            if ($route['method'] === $method && preg_match($route['uri'], $path, $matches)) {
-    
-                $params = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
-                $finalCallback = $route['callback'];
-                $middlewareStack = $route['middleware'];
+        if (!isset($this->routes[$method])) {
+            return false;
+        }
 
-                // This is the core "Next" function
-                $destination = function ($request) use ($finalCallback, $params) {
-                    if (is_callable($finalCallback)) {
-                        return call_user_func_array($finalCallback, $params);
-                    }
-                    
-                    [$controller, $action] = $finalCallback;
-                    $instance = new $controller();
-                    return call_user_func_array([$instance, $action], $params);
-                };
-
-                // Wrap the destination in middleware (working backwards)
-                $pipeline = array_reduce(
-                    array_reverse($middlewareStack),
-                    function ($next, $middlewareAlias) {
-                        return function ($request) use ($next, $middlewareAlias) {
-                            $class = $this->middlewareAliases[$middlewareAlias] ?? $middlewareAlias;
-                            $instance = new $class();
-                            return $instance->handle($request, $next);
-                        };
-                    },
-                    $destination
-                );
-
-                $result = $pipeline($request);
-
-                if ($result instanceof Response) {
-                    $result->send();
-                }
-
-                return $result ?? true;
+        // 1. Attempt to match registered routes (Explicit/Cached)
+        foreach ($this->routes[$method] as $routePattern => $routeData) {
+            if (preg_match($routePattern, $path, $matches)) {
+                return $this->runRoutePipeline($request, $routeData, $matches);
             }
         }
 
-        // No route matched. We return false so index.php can handle the External CMS fallback.
+        // 2. Fallback to Dynamic Discovery for GET requests
+        if ($method === 'GET') {
+            return $this->resolveDynamicView($path);
+        }
+
         return false;
+    }
+    
+    /**
+     * Handles middleware pipeline
+     */
+    protected function runRoutePipeline(Request $request, array $routeData, array $matches)
+    {
+        $params = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
+        $middlewareStack = $routeData['middleware'];
+
+        // Define the core destination
+        $destination = $this->createRouteDestination($routeData['callback'], $params);
+
+        // Wrap in middleware pipeline
+        $pipeline = array_reduce(
+            array_reverse($middlewareStack),
+            function ($next, $middlewareAlias) {
+                return function ($request) use ($next, $middlewareAlias) {
+                    $class = $this->middlewareAliases[$middlewareAlias] ?? $middlewareAlias;
+                    $instance = new $class();
+                    return $instance->handle($request, $next);
+                };
+            },
+            $destination
+        );
+
+        $result = $pipeline($request);
+
+        // Handle Response object if returned
+        if ($result instanceof \Savv\Utils\Response) {
+            $result->send();
+        }
+
+        return $result ?? true;
+    }
+    
+    /**
+     * The Core "Destination": To handle Cacheable Markers
+     */
+    protected function createRouteDestination($finalCallback, array $params)
+    {
+        return function ($request) use ($finalCallback, $params) {
+            // Handle Cacheable Array Markers
+            if (is_array($finalCallback) && isset($finalCallback['__savv_type'])) {
+                extract($params);
+                switch ($finalCallback['__savv_type']) {
+                    case 'redirect':
+                        return response()->redirect($finalCallback['url'], $finalCallback['status']);
+                    case 'post':
+                        $_GET['post_slug'] = $finalCallback['slug'];
+                        return require ROOT_PATH . '/views/pages/post-detail.php';
+                    case 'view':
+                        return require $finalCallback['path'];
+                }
+            }
+
+            // Handle standard Callables
+            if (is_callable($finalCallback)) {
+                return call_user_func_array($finalCallback, $params);
+            }
+
+            // Handle Controller pairs
+            [$controller, $action] = $finalCallback;
+            $instance = new $controller();
+            return call_user_func_array([$instance, $action], $params);
+        };
+    }
+    /**
+    * Dynamic Discovery Fallback
+    * This allows files in views/pages/ to work if no explicit route matches
+    */
+    protected function resolveDynamicView(string $path)
+    {
+        $slug = ($path === '') ? 'index' : $path;
+        $viewPath = ROOT_PATH . '/views/pages/' . $slug . '.php';
+
+        if (file_exists($viewPath)) {
+            require $viewPath;
+            return true;
+        }
+
+        return false; // This triggers the handleExternalFallbacks() in Application.php
     }
 }

@@ -1,0 +1,1490 @@
+
+
+--- FILE: ./src/Core/Application.php ---
+
+<?php
+namespace Savv\Core;
+
+use Savv\Utils\Router;
+use Savv\Utils\Request;
+
+class Application {
+    public static function bootstrap($rootPath) {
+        if (!defined('ROOT_PATH')) define('ROOT_PATH', $rootPath);
+        
+        // Load .env
+        if (file_exists(ROOT_PATH . '/.env')) {
+            \Dotenv\Dotenv::createImmutable(ROOT_PATH)->load();
+        }
+
+        return new self();
+    }
+
+    public function run() {
+        $cacheFile = ROOT_PATH . '/storage/framework/routes.php';
+        $router = Router::getInstance();
+
+        if (file_exists($cacheFile)) {
+            $router->loadRawRoutes(require $cacheFile);
+        } else {
+            // Load user route files and redirections config from their project directory
+            $router->loadRouteFiles();
+            $router->registerRedirections();
+        } 
+
+        $request = Request::capture();
+        $handled = Router::getInstance()->dispatch($request);
+
+        if (!$handled) {
+            $this->handleExternalFallbacks();
+        }
+    }
+
+    /**
+     * Fallback:
+     * Iterates through external CMS installations defined in config.
+     */
+    protected function handleExternalFallbacks(): void
+    {
+        $installations = config('installations') ?? [];
+
+        foreach ($installations as $cms => $settings) {
+            // Only attempt if the installation is marked active
+            if (!empty($settings['active']) && file_exists($settings['path'])) {
+                
+                // For WordPress specifically, we require the header
+                // Note: We 'return' here because the CMS usually takes over the exit process
+                require $settings['path'];
+                return; 
+            }
+        }
+
+        // Final 404 if no CMS claimed the request
+        $this->abort404();
+    }
+
+    /**
+     * Standard 404 handler if everything else fails.
+     */
+    protected function abort404(): void
+    {
+        http_response_code(404);
+        
+        // Check if user has a custom 404 view
+        $custom404 = ROOT_PATH . '/views/404.php';
+        if (file_exists($custom404)) {
+            require $custom404;
+        } else {
+            echo "404 - Page not found!.";
+        }
+        exit;
+    }
+}
+
+--- FILE: ./src/Providers/AppProvider.php ---
+
+<?php 
+namespace Savv\Providers;
+
+/**
+ * Provides framework-level configuration that is shared across the core runtime.
+ *
+ * At the moment this provider is responsible for exposing the middleware aliases
+ * available to the router. Internal framework aliases are merged with any aliases
+ * defined by the application in {@see \App\Constants\MiddlewareConstants}.
+ */
+class AppProvider 
+{
+    /**
+     * Built-in middleware aliases reserved for the framework namespace.
+     *
+     * @var array<string, class-string>
+     */
+    protected static array $savoMiddlewareAliases = [];
+
+    /**
+     * Return every middleware alias available to the router.
+     *
+     * Framework aliases are merged with application aliases so projects can
+     * register custom middleware without editing the core router.
+     *
+     * @return array<string, class-string>
+     */
+    public static function middlewareAliases(): array
+    {
+        return array_merge(self::$savoMiddlewareAliases, config('middlewares'));
+    }
+}
+
+--- FILE: ./src/Utils/Validator.php ---
+
+<?php
+namespace Savv\Utils;
+
+/**
+ * Performs lightweight rule-based validation on associative input arrays.
+ *
+ * Supported rules currently include `required`, `email`, `min`, `max`,
+ * `numeric`, and `url`.
+ */
+class Validator {
+    /**
+     * Validation errors keyed by field name.
+     *
+     * @var array<string, string>
+     */
+    private static $errors = [];
+
+    /**
+     * Validate a data payload against a set of pipe-delimited rules.
+     *
+     * @param array<string, mixed> $data Input data to validate.
+     * @param array<string, string> $rules Validation rules keyed by field name.
+     * @return bool True when validation passes with no errors.
+     */
+    public static function validate(array $data, array $rules) {
+        self::$errors = []; // Reset errors on each call
+
+        foreach ($rules as $field => $fieldRules) {
+            $value = $data[$field] ?? null;
+            $ruleList = explode('|', $fieldRules);
+
+            foreach ($ruleList as $rule) {
+                // Handle rules with parameters like min:3 or max:10
+                $params = [];
+                if (strpos($rule, ':') !== false) {
+                    list($rule, $paramString) = explode(':', $rule);
+                    $params = explode(',', $paramString);
+                }
+
+                self::applyRule($field, $value, $rule, $params);
+            }
+        }
+        
+        return empty(self::$errors);
+    }
+
+    /**
+     * Apply a single validation rule to a field value.
+     *
+     * @param string $field Field name currently being validated.
+     * @param mixed $value Current field value.
+     * @param string $rule Validation rule name.
+     * @param array<int, string> $params Optional rule parameters.
+     * @return void
+     */
+    private static function applyRule($field, $value, $rule, $params) {
+        $fieldName = ucfirst($field);
+
+        switch ($rule) {
+            case 'required':
+                if (empty($value) && $value !== '0') {
+                    self::$errors[$field] = "{$fieldName} is required.";
+                }
+                break;
+
+            case 'email':
+                if (!empty($value) && !filter_var($value, FILTER_VALIDATE_EMAIL)) {
+                    self::$errors[$field] = "Invalid email format.";
+                }
+                break;
+
+            case 'min':
+                $min = $params[0];
+                if (!empty($value) && strlen($value) < $min) {
+                    self::$errors[$field] = "{$fieldName} must be at least {$min} characters.";
+                }
+                break;
+
+            case 'max':
+                $max = $params[0];
+                if (!empty($value) && strlen($value) > $max) {
+                    self::$errors[$field] = "{$fieldName} cannot exceed {$max} characters.";
+                }
+                break;
+
+            case 'numeric':
+                if (!empty($value) && !is_numeric($value)) {
+                    self::$errors[$field] = "{$fieldName} must be a number.";
+                }
+                break;
+                
+            case 'url':
+                if (!empty($value) && !filter_var($value, FILTER_VALIDATE_URL)) {
+                    self::$errors[$field] = "{$fieldName} must be a valid URL.";
+                }
+                break;
+        }
+    }
+
+    /**
+     * Return the validation errors collected during the last validation run.
+     *
+     * @return array<string, string> Validation errors keyed by field name.
+     */
+    public static function getErrors() {
+        return self::$errors;
+    }
+}
+
+
+--- FILE: ./src/Utils/Response.php ---
+
+<?php 
+namespace Savv\Utils;
+
+/**
+ * Encapsulates an HTTP response payload, status code, and headers.
+ *
+ * Response instances can be returned from routes and controllers, then sent by
+ * the router once the middleware pipeline completes.
+ */
+class Response
+{
+    /**
+     * Raw response body content.
+     *
+     * @var string
+     */
+    protected string $content;
+
+    /**
+     * HTTP status code for the response.
+     *
+     * @var int
+     */
+    protected int $status;
+
+    /**
+     * Headers to send with the response.
+     *
+     * @var array<string, string>
+     */
+    protected array $headers = [];
+
+    /**
+     * Create a new response instance.
+     *
+     * @param string $content Response body content.
+     * @param int $status HTTP status code.
+     * @param array<string, string> $headers Response headers keyed by header name.
+     */
+    public function __construct(string $content = '', int $status = 200, array $headers = [])
+    {
+        $this->content = $content;
+        $this->status = $status;
+        $this->headers = $headers;
+    }
+
+    /**
+     * Set the HTTP status code.
+     *
+     * @param int $code HTTP status code to send.
+     * @return self The current response instance for chaining.
+     */
+    public function setStatus(int $code): self
+    {
+        $this->status = $code;
+        return $this;
+    }
+
+    /**
+     * Add or replace a response header.
+     *
+     * @param string $key Header name.
+     * @param string $value Header value.
+     * @return self The current response instance for chaining.
+     */
+    public function header(string $key, string $value): self
+    {
+        $this->headers[$key] = $value;
+        return $this;
+    }
+
+    /**
+     * Convert the response payload to JSON and mark the response as JSON.
+     *
+     * @param array<string, mixed> $data Data to encode as JSON.
+     * @param int $status HTTP status code for the JSON response.
+     * @return self The current response instance for chaining.
+     */
+    public function json(array $data, int $status = 200): self
+    {
+        $this->content = json_encode($data);
+        $this->setStatus($status);
+        $this->header('Content-Type', 'application/json');
+        return $this;
+    }
+
+    /**
+     * Configure the response as an HTTP redirect.
+     *
+     * @param string $url Destination URL.
+     * @param int $status Redirect status code, usually `302` or `301`.
+     * @return self The current response instance for chaining.
+     */
+    public function redirect(string $url, int $status = 302): self
+    {
+        $this->setStatus($status);
+        $this->header('Location', $url);
+        return $this;
+    }
+
+    /**
+     * Send the status code, headers, and content to the client.
+     *
+     * @return void
+     */
+    public function send(): void
+    {
+        // 1. Send Status Code
+        http_response_code($this->status);
+
+        // 2. Send Headers
+        foreach ($this->headers as $key => $value) {
+            header("$key: $value");
+        }
+
+        // 3. Output Content
+        echo $this->content;
+    }
+
+    /**
+     * Render a PHP view file into the response content buffer.
+     *
+     * The supplied data array is extracted into the view scope before the file
+     * is required, making each key available as a local variable in the view.
+     *
+     * @param string $viewPath View path relative to the root `views` directory, without `.php`.
+     * @param array<string, mixed> $data Data exposed to the view.
+     * @return self The current response instance for chaining.
+     */
+    public function view(string $viewPath, array $data = []): self
+    {
+        extract($data);
+        ob_start();
+        require ROOT_PATH . "/views/{$viewPath}.php";
+        $this->content = ob_get_clean();
+        
+        return $this;
+    }
+}
+
+
+--- FILE: ./src/Utils/Config.php ---
+
+<?php
+namespace Savv\Utils;
+
+/**
+ * Loads and caches configuration arrays from the {@see ROOT_PATH}/configs directory.
+ *
+ * Config values are accessed using dot notation where the first segment maps to
+ * the config filename and the remaining segments traverse nested array keys.
+ */
+class Config
+{
+    /**
+     * Cached config payloads keyed by config filename.
+     *
+     * @var array<string, array<mixed>>
+     */
+    protected static array $cache = [];
+
+    /**
+     * Retrieve a configuration value using dot notation.
+     *
+     * Example: `config('mail.smtp.host')` will load `configs/mail.php` and return
+     * the nested `smtp.host` value when available.
+     *
+     * @param string $key Dot-notated config key where the first segment is the filename.
+     * @param mixed $default Fallback value returned when the config file or key is missing.
+     * @return mixed The resolved configuration value or the provided default.
+     */
+    public static function get(string $key, $default = null)
+    {
+        $parts = explode('.', $key);
+        $filename = array_shift($parts);
+
+        if (!isset(self::$cache[$filename])) {
+            // Use the global ROOT_PATH constant here
+            $path = ROOT_PATH . "/configs/{$filename}.php";
+            
+            if (!file_exists($path)) {
+                return $default;
+            }
+            
+            self::$cache[$filename] = require $path;
+        }
+
+        $items = self::$cache[$filename];
+
+        foreach ($parts as $segment) {
+            if (is_array($items) && array_key_exists($segment, $items)) {
+                $items = $items[$segment];
+            } else {
+                return $default;
+            }
+        }
+
+        return $items;
+    }
+}
+
+
+--- FILE: ./src/Utils/Request.php ---
+
+<?php
+namespace Savv\Utils;
+
+/**
+ * Represents the current HTTP request using PHP superglobals as the data source.
+ *
+ * The request object provides small convenience methods for accessing GET, POST,
+ * files, request metadata, and common request checks in a framework-friendly way.
+ */
+class Request
+{
+    /**
+     * Query string values from `$_GET`.
+     *
+     * @var array<string, mixed>
+     */
+    protected array $queryParams;
+
+    /**
+     * Form and body values from `$_POST`.
+     *
+     * @var array<string, mixed>
+     */
+    protected array $postData;
+
+    /**
+     * Server metadata from `$_SERVER`.
+     *
+     * @var array<string, mixed>
+     */
+    protected array $serverData;
+
+    /**
+     * Uploaded file information from `$_FILES`.
+     *
+     * @var array<string, mixed>
+     */
+    protected array $files;
+
+    /**
+     * Create a request snapshot from the current PHP superglobals.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        $this->queryParams = $_GET;
+        $this->postData = $_POST;
+        $this->serverData = $_SERVER;
+        $this->files = $_FILES;
+    }
+
+    /**
+     * Create a new request instance for the current HTTP lifecycle.
+     *
+     * @return self A fresh request object populated from superglobals.
+     */
+    public static function capture(): self
+    {
+        return new self();
+    }
+
+    /**
+     * Get a single input value with POST data taking precedence over query data.
+     *
+     * @param string $key Input key to resolve.
+     * @param mixed $default Value returned when the key does not exist.
+     * @return mixed The resolved input value or the provided default.
+     */
+    public function input(string $key, $default = null)
+    {
+        return $this->postData[$key] ?? $this->queryParams[$key] ?? $default;
+    }
+
+    /**
+     * Get all request input values with POST taking precedence over GET.
+     *
+     * @return array<string, mixed> Combined request input payload.
+     */
+    public function all(): array
+    {
+        return array_merge($this->queryParams, $this->postData);
+    }
+
+    /**
+     * Get all POST data or a specific POST field.
+     *
+     * @param string|null $key POST field to retrieve. Pass null to return the full POST payload.
+     * @param mixed $default Value returned when the requested POST field is missing.
+     * @return mixed Either the complete POST array or a single resolved value.
+     */
+    public function post(string $key = null, $default = null)
+    {
+        if ($key === null) {
+            return $this->postData;
+        }
+
+        return $this->postData[$key] ?? $default;
+    }
+
+    /**
+     * Retrieve only the specified input keys from the request.
+     *
+     * Missing keys are included with a null value to preserve the requested shape.
+     *
+     * @param array<int, string> $keys Input keys to extract.
+     * @return array<string, mixed> Associative array containing only the requested keys.
+     */
+    public function only(array $keys): array
+    {
+        $data = [];
+
+        foreach ($keys as $key) {
+            $data[$key] = $this->input($key);
+        }
+
+        return $data;
+    }
+
+    /**
+     * Retrieve all request input except the specified keys.
+     *
+     * @param array<int, string> $keys Input keys to omit.
+     * @return array<string, mixed> Request input array without the excluded keys.
+     */
+    public function except(array $keys): array
+    {
+        return array_diff_key($this->all(), array_flip($keys));
+    }
+
+    /**
+     * Determine if an input field has a non-empty value.
+     *
+     * The values `'0'` and `0` are treated as filled.
+     *
+     * @param string $key Input key to inspect.
+     * @return bool True when the field contains a meaningful value.
+     */
+    public function filled(string $key): bool
+    {
+        $value = $this->input($key);
+
+        return !empty($value) || $value === '0' || $value === 0;
+    }
+
+    /**
+     * Get all query parameters or a specific query string value.
+     *
+     * @param string|null $key Query parameter key to retrieve. Pass null to return the full query array.
+     * @param mixed $default Value returned when the requested query key is missing.
+     * @return mixed Either the complete query parameter array or a single resolved value.
+     */
+    public function query(string $key = null, $default = null)
+    {
+        if (null === $key) return $this->queryParams;
+        return $this->queryParams[$key] ?? $default;
+    }
+
+    /**
+     * Get the request HTTP method.
+     *
+     * @return string The request method such as `GET`, `POST`, or `PUT`.
+     */
+    public function method(): string
+    {
+        return $this->serverData['REQUEST_METHOD'] ?? 'GET';
+    }
+
+    /**
+     * Get the normalized request path without the query string.
+     *
+     * @return string Path portion of the request URI.
+     */
+    public function path(): string
+    {
+        $uri = $this->serverData['REQUEST_URI'] ?? '/';
+        return parse_url($uri, PHP_URL_PATH);
+    }
+    
+    /**
+     * Determine whether the request was made via AJAX.
+     *
+     * This checks the `X-Requested-With` header for the conventional
+     * `XMLHttpRequest` marker.
+     *
+     * @return bool True when the request looks like an AJAX request.
+     */
+    public function ajax(): bool
+    {
+        return isset($this->serverData['HTTP_X_REQUESTED_WITH']) && 
+               strtolower($this->serverData['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+    }
+}
+
+
+--- FILE: ./src/Utils/Router.php ---
+
+<?php
+namespace Savv\Utils;
+
+use Savv\Providers\AppProvider;
+use Savv\Utils\{Response};
+
+/**
+ * Registers routes, groups shared route attributes, resolves named URLs,
+ * and dispatches the current request through middleware to a callback.
+ *
+ * The router is implemented as a singleton so route definition files can
+ * populate one shared route table during bootstrap.
+ */
+class Router
+{  
+    /**
+     * Singleton router instance.
+     *
+     * @var self|null
+     */
+    protected static ?Router $instance = null;
+
+    /**
+     * Registered routes in dispatch order.
+     *
+     * @var array<int, array<string, mixed>>
+     */
+    protected array $routes = [];
+
+    /**
+     * Stack of active route groups used to accumulate prefixes, names, and middleware.
+     *
+     * @var array<int, array<string, mixed>>
+     */
+    protected array $groupStack = [];
+
+    /**
+     * Resolved middleware alias map.
+     *
+     * @var array<string, class-string>
+     */
+    protected array $middlewareAliases = [];
+
+    /**
+     * Create the router and load middleware aliases from the application provider.
+     *
+     * The constructor is protected to enforce singleton access through
+     * {@see self::getInstance()}.
+     *
+     * @return void
+     */
+    protected function __construct()
+    {
+        $this->middlewareAliases = AppProvider::middlewareAliases();
+    }
+
+    /**
+     * Get the shared router instance.
+     *
+     * @return self The singleton router instance.
+     */
+    public static function getInstance(): self
+    {
+        if (self::$instance === null) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+
+    /**
+     * Generate a URL for a named route.
+     *
+     * Route parameters are substituted into placeholders such as `{slug}` in the
+     * original route URI before the final path is returned.
+     *
+     * @param string $name Fully qualified route name.
+     * @param array<string, scalar> $params Placeholder replacements keyed by parameter name.
+     * @return string Generated relative URL, or `#` when the route name is unknown.
+     */
+    public function route(string $name, array $params = []): string
+    {
+        foreach ($this->routes as $route) {
+            if ($route['name'] === $name) {
+                $uri = $route['original_uri'];
+                foreach ($params as $key => $value) {
+                    $uri = str_replace("{{$key}}", $value, $uri);
+                }
+                return '/' . ltrim($uri, '/');
+            }
+        }
+        return '#';
+    }
+
+    /**
+     * Scans the routes directory and loads every PHP file found.
+     */
+    public function loadRouteFiles(): void
+    {
+        $routeDir = ROOT_PATH . '/routes';
+
+        if (is_dir($routeDir)) {
+            $files = glob($routeDir . '/*.php');
+            foreach ($files as $file) {
+                require_once $file;
+            }
+        }
+    }
+
+    public function registerRedirections() 
+    {
+        $redirects = config('redirections') ?? [];
+        $router = Router::getInstance();
+
+        foreach ($redirects as $slug => $target) {
+            $router->get($slug, function() use ($target) {
+                $url = is_array($target) ? $target['url'] : $target;
+                $status = is_array($target) ? ($target['status'] ?? 302) : 302;
+
+                return response()->redirect($url, $status);
+            });
+        }
+    }
+
+    /**
+     * Load a pre-compiled array of routes (Used by Cache)
+     */
+    public function loadRawRoutes(array $routes): void
+    {
+        $this->routes = $routes;
+    }
+
+    /**
+     * Get all registered routes (Used to generate Cache)
+     */
+    public function getRoutes(): array
+    {
+        return $this->routes;
+    }
+
+    /**
+     * Resolve the middleware currently inherited from nested groups.
+     *
+     * @return array<int, string> Middleware aliases or class names applied to the active group stack.
+     */
+    protected function getCurrentMiddleware(): array
+    {
+        $middleware = [];
+        foreach ($this->groupStack as $group) {
+            if (isset($group['middleware'])) {
+                $middleware = array_merge($middleware, (array)$group['middleware']);
+            }
+        }
+        return $middleware;
+    }
+
+    /**
+     * Append middleware to the most recently registered route.
+     *
+     * @param string|array<int, string> $middleware Middleware alias, class name, or list of both.
+     * @return self The router instance for fluent chaining.
+     */
+    public function middleware($middleware): self
+    {
+        $lastIndex = array_key_last($this->routes);
+        if ($lastIndex !== null) {
+            $this->routes[$lastIndex]['middleware'] = array_merge(
+                $this->routes[$lastIndex]['middleware'], 
+                (array)$middleware
+            );
+        }
+        return $this;
+    }
+
+    /**
+     * Register a route group with shared attributes such as prefix, name, and middleware.
+     *
+     * @param array<string, mixed> $attributes Shared group attributes.
+     * @param callable $callback Callback that receives the router instance for nested route registration.
+     * @return void
+     */
+    public function group(array $attributes, callable $callback): void
+    {
+        // Add current attributes to the stack
+        $this->groupStack[] = $attributes;
+
+        // Execute the routes defined inside the group
+        $callback($this);
+
+        // Remove the last attributes from the stack after the group is done
+        array_pop($this->groupStack);
+    }
+
+    
+
+    /**
+     * Resolve the URI prefix inherited from nested route groups.
+     *
+     * @return string URI prefix without leading or trailing slashes.
+     */
+    protected function getCurrentPrefix(): string
+    {
+        $prefix = '';
+        foreach ($this->groupStack as $group) {
+            if (isset($group['prefix'])) {
+                $prefix .= '/' . trim($group['prefix'], '/');
+            }
+        }
+        return trim($prefix, '/');
+    }
+
+    /**
+     * Resolve the route name prefix inherited from nested route groups.
+     *
+     * @return string Concatenated route name prefix.
+     */
+    protected function getCurrentNamePrefix(): string
+    {
+        $namePrefix = '';
+        foreach ($this->groupStack as $group) {
+            if (isset($group['name'])) {
+                $namePrefix .= $group['name'];
+            }
+        }
+        return $namePrefix;
+    }
+
+    /**
+     * Register a route entry in the internal route table.
+     *
+     * Dynamic URI segments wrapped in braces, such as `{slug}`, are converted to
+     * named regular expression groups for dispatch-time parameter extraction.
+     *
+     * @param string $method HTTP method for the route.
+     * @param string $uri Route URI pattern relative to the current group prefix.
+     * @param callable|array{0:class-string,1:string} $callback Route action callback or controller action pair.
+     * @return self The router instance for fluent chaining.
+     */
+    protected function addRoute(string $method, string $uri, $callback): self
+    {
+        // 1. Combine Prefixes
+        $prefix = $this->getCurrentPrefix();
+        $fullUri = trim($prefix . '/' . trim($uri, '/'), '/');
+        
+        // 2. Combine Name Prefixes
+        $namePrefix = $this->getCurrentNamePrefix();
+
+        // 3. Convert to Regex (same as before)
+        $regexUri = preg_replace('/\{([a-zA-Z]+)\}/', '(?P<\1>[a-zA-Z0-9_-]+)', $fullUri);
+        $regexUri = "#^" . ($regexUri === '' ? '' : $regexUri) . "$#";
+
+        $this->routes[] = [
+            'method'   => $method,
+            'uri'      => $regexUri,
+            'callback' => $callback,
+            'name'     => $namePrefix, // Store the accumulated name prefix
+            'original_uri' => $fullUri,
+            'middleware' => $this->getCurrentMiddleware() // Store middleware
+        ];
+
+        return $this;
+    }
+
+
+    /**
+     * Append a name to the most recently registered route.
+     *
+     * Group name prefixes are preserved and the provided segment is concatenated.
+     *
+     * @param string $name Route name segment.
+     * @return self The router instance for fluent chaining.
+     */
+    public function name(string $name): self
+    {
+        $lastIndex = array_key_last($this->routes);
+        // Append the specific name to the group's name prefix
+        if ($lastIndex !== null) {
+            $this->routes[$lastIndex]['name'] .= $name;
+        }
+        return $this;
+    }
+
+    /**
+     * Register a `GET` route.
+     *
+     * @param string $uri Route URI pattern.
+     * @param callable|array{0:class-string,1:string} $callback Route action callback or controller action pair.
+     * @return self The router instance for fluent chaining.
+     */
+    public function get(string $uri, $callback): self
+    {
+        return $this->addRoute('GET', $uri, $callback);
+    }
+
+    /**
+     * Register a `POST` route.
+     *
+     * @param string $uri Route URI pattern.
+     * @param callable|array{0:class-string,1:string} $callback Route action callback or controller action pair.
+     * @return self The router instance for fluent chaining.
+     */
+    public function post(string $uri, $callback): self
+    {
+        return $this->addRoute('POST', $uri, $callback);
+    }
+
+    /**
+     * Match the incoming request against the route table and execute the pipeline.
+     *
+     * When a route matches, middleware is wrapped around the route action from
+     * last declared to first declared, then the final result is returned. If a
+     * {@see Response} instance is returned, it is automatically sent.
+     *
+     * @param Request $request Current HTTP request instance.
+     * @return mixed Returns the route result, `true` for handled non-response routes, or `false` when no route matches.
+     */  
+    public function dispatch(Request $request)
+    {
+        $method = $request->method();
+        $path = trim($request->path(), '/');
+
+        if (!isset($this->routes[$method])) {
+            return false;
+        }
+
+        // 1. Attempt to match registered routes (Explicit/Cached)
+        foreach ($this->routes[$method] as $routePattern => $routeData) {
+            if (preg_match($routePattern, $path, $matches)) {
+                return $this->runRoutePipeline($request, $routeData, $matches);
+            }
+        }
+
+        // 2. Fallback to Dynamic Discovery for GET requests
+        if ($method === 'GET') {
+            return $this->resolveDynamicView($path);
+        }
+
+        return false;
+    }
+    
+    /**
+     * Handles middleware pipeline
+     */
+    protected function runRoutePipeline(Request $request, array $routeData, array $matches)
+    {
+        $params = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
+        $middlewareStack = $routeData['middleware'];
+
+        // Define the core destination
+        $destination = $this->createRouteDestination($routeData['callback'], $params);
+
+        // Wrap in middleware pipeline
+        $pipeline = array_reduce(
+            array_reverse($middlewareStack),
+            function ($next, $middlewareAlias) {
+                return function ($request) use ($next, $middlewareAlias) {
+                    $class = $this->middlewareAliases[$middlewareAlias] ?? $middlewareAlias;
+                    $instance = new $class();
+                    return $instance->handle($request, $next);
+                };
+            },
+            $destination
+        );
+
+        $result = $pipeline($request);
+
+        // Handle Response object if returned
+        if ($result instanceof \Savv\Utils\Response) {
+            $result->send();
+        }
+
+        return $result ?? true;
+    }
+    
+    /**
+     * The Core "Destination": To handle Cacheable Markers
+     */
+    protected function createRouteDestination($finalCallback, array $params)
+    {
+        return function ($request) use ($finalCallback, $params) {
+            // Handle Cacheable Array Markers
+            if (is_array($finalCallback) && isset($finalCallback['__savv_type'])) {
+                extract($params);
+                switch ($finalCallback['__savv_type']) {
+                    case 'redirect':
+                        return response()->redirect($finalCallback['url'], $finalCallback['status']);
+                    case 'post':
+                        $_GET['post_slug'] = $finalCallback['slug'];
+                        return require ROOT_PATH . '/views/pages/post-detail.php';
+                    case 'view':
+                        return require $finalCallback['path'];
+                }
+            }
+
+            // Handle standard Callables
+            if (is_callable($finalCallback)) {
+                return call_user_func_array($finalCallback, $params);
+            }
+
+            // Handle Controller pairs
+            [$controller, $action] = $finalCallback;
+            $instance = new $controller();
+            return call_user_func_array([$instance, $action], $params);
+        };
+    }
+    /**
+    * Dynamic Discovery Fallback
+    * This allows files in views/pages/ to work if no explicit route matches
+    */
+    protected function resolveDynamicView(string $path)
+    {
+        $slug = ($path === '') ? 'index' : $path;
+        $viewPath = ROOT_PATH . '/views/pages/' . $slug . '.php';
+
+        if (file_exists($viewPath)) {
+            require $viewPath;
+            return true;
+        }
+
+        return false; // This triggers the handleExternalFallbacks() in Application.php
+    }
+}
+
+--- FILE: ./src/Utils/Log.php ---
+
+<?php
+namespace Savv\Utils;
+
+/**
+ * Writes simple structured application logs to daily files in `storage/logs`.
+ */
+class Log
+{
+    /**
+     * Append a formatted log entry to the current day's log file.
+     *
+     * @param string $level Log severity level.
+     * @param string $message Primary log message.
+     * @param array<string, mixed> $context Extra structured context to encode as JSON.
+     * @return void
+     */
+    protected static function write(string $level, string $message, array $context = []): void
+    {
+        $logDir = ROOT_PATH . '/storage/logs';
+        
+        // 1. Ensure the directory exists
+        if (!is_dir($logDir)) {
+            mkdir($logDir, 0777, true);
+        }
+
+        // 2. Define the filename based on today's date
+        $filePath = $logDir . '/' . date('Y-m-d') . '.log';
+
+        // 3. Format the log entry
+        // [2026-04-15 14:30:01] INFO: User logged in. {"user_id": 5}
+        $timestamp = date('Y-m-d H:i:s');
+        $contextString = !empty($context) ? ' ' . json_encode($context) : '';
+        $formattedMessage = "[$timestamp] " . strtoupper($level) . ": {$message}{$contextString}" . PHP_EOL;
+
+        // 4. Append to file (FILE_APPEND) and lock it while writing (LOCK_EX)
+        file_put_contents($filePath, $formattedMessage, FILE_APPEND | LOCK_EX);
+    }
+
+    /**
+     * Write an informational log entry.
+     *
+     * @param string $message Primary log message.
+     * @param array<string, mixed> $context Extra structured context.
+     * @return void
+     */
+    public static function info(string $message, array $context = []): void
+    {
+        self::write('info', $message, $context);
+    }
+
+    /**
+     * Write an error log entry.
+     *
+     * @param string $message Primary log message.
+     * @param array<string, mixed> $context Extra structured context.
+     * @return void
+     */
+    public static function error(string $message, array $context = []): void
+    {
+        self::write('error', $message, $context);
+    }
+
+    /**
+     * Write a warning log entry.
+     *
+     * @param string $message Primary log message.
+     * @param array<string, mixed> $context Extra structured context.
+     * @return void
+     */
+    public static function warning(string $message, array $context = []): void
+    {
+        self::write('warning', $message, $context);
+    }
+
+    /**
+     * Write a debug log entry.
+     *
+     * @param string $message Primary log message.
+     * @param array<string, mixed> $context Extra structured context.
+     * @return void
+     */
+    public static function debug(string $message, array $context = []): void
+    {
+        self::write('debug', $message, $context);
+    }
+}
+
+
+--- FILE: ./src/Helpers/helpers.php ---
+
+<?php 
+use Savv\Utils\{Request, Response, Config, Validator, Router, Log};
+
+if (!function_exists('request')) {
+    /**
+     * Resolve the shared request instance or fetch a single input value from it.
+     *
+     * When no key is provided, the cached {@see Request} instance is returned.
+     * When a key is provided, the helper proxies to {@see Request::input()}.
+     *
+     * @param string|null $key Input key to retrieve. Pass null to get the request object.
+     * @param mixed $default Fallback value used when the key does not exist.
+     * @return \Savv\Utils\Request|mixed Request instance or resolved input value.
+     */
+    function request($key = null, $default = null) {
+        static $instance = null;
+        if ($instance === null) {
+            $instance = Request::capture();
+        }
+
+        if ($key === null) return $instance;
+        return $instance->input($key, $default);
+    }
+}
+
+
+if (!function_exists('response')) {
+    /**
+     * Create a new response instance for HTML, JSON, redirects, or view rendering.
+     *
+     * @param string $content Initial response body content.
+     * @param int $status HTTP status code for the response.
+     * @return \Savv\Utils\Response New response instance.
+     */
+    function response($content = '', $status = 200) {
+        return new Response($content, $status);
+    }
+}
+
+if (!function_exists('config')) {
+    /**
+     * Retrieve a configuration value using dot notation.
+     *
+     * @param string $key Dot-notated configuration key.
+     * @param mixed $default Fallback value returned when the key is missing.
+     * @return mixed The resolved configuration value or the provided default.
+     */
+    function config(string $key, $default = null) {
+        return Config::get($key, $default);
+    }
+}
+
+/**
+ * Build an absolute path to a file within the root `views` directory.
+ *
+ * @param string $path Optional relative path inside the views directory.
+ * @return string Absolute filesystem path to the requested view location.
+ */
+function view_path($path = '') {
+    return ROOT_PATH . '/views' . ($path ? DIRECTORY_SEPARATOR . $path : $path);
+}
+
+/**
+ * Validate an input array and immediately terminate with a JSON error payload on failure.
+ *
+ * The returned array is reduced to only the keys defined in the rules array, which
+ * makes it convenient for request sanitization after validation succeeds.
+ *
+ * @param array<string, mixed> $data Input data to validate.
+ * @param array<string, string> $rules Validation rules keyed by field name.
+ * @return array<string, mixed> Validated data limited to keys declared in the rules.
+ */
+if (!function_exists('validate')) {
+    function validate(array $data, array $rules): array {
+        if (!Validator::validate($data, $rules)) {
+            header('Content-Type: application/json');
+            http_response_code(422);
+            echo json_encode([
+                "status" => "error",
+                "errors" => Validator::getErrors()
+            ]);
+            exit;
+        }
+
+        // Return only the keys defined in the rules (similar to Laravel's $request->validated())
+        return array_intersect_key($data, $rules);
+    }
+}
+
+if (!function_exists('route')) {
+    /**
+     * Generate a URL for a named route.
+     *
+     * @param string $name Registered route name.
+     * @param array<string, scalar> $params Route placeholder replacements.
+     * @return string Generated relative URL, or `#` when the route name is unknown.
+     */
+    function route(string $name, array $params = []) {
+        return Router::getInstance()->route($name, $params);
+    }
+}
+
+/**
+ * Resolve the shared router instance for route registration or URL generation.
+ *
+ * @return \Savv\Utils\Router The singleton router instance.
+ */
+if (!function_exists('router')) {
+    function router() {
+        return Router::getInstance();
+    }
+}
+
+if (!function_exists('logger')) {
+    /**
+     * Write an informational log entry or return a log utility instance.
+     *
+     * Passing a message writes an `info` log immediately. Passing no message returns
+     * a log instance so other methods such as `error()` or `debug()` can be called.
+     *
+     * @param string|null $message Message to write as an info log entry.
+     * @param array<string, mixed> $context Structured log context.
+     * @return \Savv\Utils\Log|void Log instance when no message is supplied; otherwise nothing.
+     */
+    function logger($message = null, array $context = []) {
+        if (is_null($message)) {
+            return new Log;
+        }
+        
+        Log::info($message, $context);
+    }
+}
+
+
+--- FILE: ./src/Console/Commands/MakeController.php ---
+
+<?php
+
+namespace Savv\Console\Commands;
+
+class MakeController
+{
+    public function execute(array $args): void
+    {
+        if (empty($args)) {
+            echo "Error: Please provide a controller name (e.g., php savv make:controller ContactController)\n";
+            return;
+        }
+
+        $name = $args[0];
+        // Ensure name ends with Controller for consistency
+        if (!str_ends_with($name, 'Controller')) {
+            $name .= 'Controller';
+        }
+
+        $path = ROOT_PATH . "/app/Controllers/{$name}.php";
+
+        if (file_exists($path)) {
+            echo "Error: Controller '{$name}' already exists.\n";
+            return;
+        }
+
+        if (!is_dir(dirname($path))) {
+            mkdir(dirname($path), 0777, true);
+        }
+
+        $stub = $this->getStub($name);
+        
+        if (file_put_contents($path, $stub)) {
+            echo "Success: Controller created at app/Controllers/{$name}.php\n";
+        }
+    }
+
+    protected function getStub(string $name): string
+    {
+        return "<?php\n\nnamespace App\Controllers;\n\nuse Savv\Utils\Request;\n\nclass {$name}\n{\n    public function index()\n    {\n        return response()->view('index');\n    }\n}\n";
+    }
+}
+
+--- FILE: ./src/Console/Commands/MakeConfig.php ---
+
+<?php
+
+namespace Savv\Console\Commands;
+
+class MakeConfig
+{
+    public function execute(array $args): void
+    {
+        if (empty($args)) {
+            echo "Error: Please provide a config name (e.g., php savv make:config redirections)\n";
+            return;
+        }
+
+        $name = strtolower($args[0]);
+        $path = ROOT_PATH . "/configs/{$name}.php";
+
+        if (file_exists($path)) {
+            echo "Error: Config file '{$name}.php' already exists.\n";
+            return;
+        }
+
+        if (!is_dir(dirname($path))) {
+            mkdir(dirname($path), 0777, true);
+        }
+
+        $stub = "<?php\n\nreturn [\n    // Define your {$name} configuration here\n];\n";
+
+        if (file_put_contents($path, $stub)) {
+            echo "Success: Config file created at configs/{$name}.php\n";
+        }
+    }
+}
+
+--- FILE: ./src/Console/Commands/RouteCache.php ---
+
+<?php
+namespace Savv\Console\Commands;
+
+use Savv\Utils\Router;
+
+class RouteCache
+{
+    public function execute($args)
+    {
+        echo "Starting route compilation...\n";
+
+        // 1. Initialize a fresh Router instance
+        $router = Router::getInstance();
+
+        // 2. Load Routes files
+        $router->loadRouteFiles();
+
+        // 3. Scan views/ directory for Dynamic Routes
+        $this->compileViews($router);
+
+        // 4. Load Redirections
+        $this->compileRedirections($router);
+
+        // 5. Load Posts Config Discovery
+        $this->compilePosts($router);
+
+        // 6. Save to Storage
+        $cachePath = ROOT_PATH . '/storage/framework/routes.php';
+        if (!is_dir(dirname($cachePath))) mkdir(dirname($cachePath), 0777, true);
+
+        $exported = var_export($router->getRoutes(), true);
+        $content = "<?php\n\n// Generated by Savv - " . date('Y-m-d H:i:s') . "\nreturn " . $exported . ";";
+        
+        file_put_contents($cachePath, $content);
+
+        echo "Success: Manifest saved to {$cachePath}\n";
+    }
+
+    protected function compileViews($router) {
+        $viewDir = ROOT_PATH . '/views/pages';
+        if (!is_dir($viewDir)) return;
+
+        $files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($viewDir));
+        foreach ($files as $file) {
+            if ($file->isDir() || $file->getExtension() !== 'php') continue;
+            
+            $relative = str_replace([$viewDir, '.php'], '', $file->getPathname());
+            $uri = trim($relative, '/');
+            $uri = ($uri === 'index') ? '/' : $uri;
+
+            // Pass a "View Marker" instead of a Closure 
+            $router->get($uri, ['__savv_view' => $file->getPathname()]);
+        }
+    }
+
+    protected function compileRedirections($router) {
+        $redirects = config('redirections') ?? [];  
+        foreach ($redirects as $slug => $target) {
+            // Use a marker that tells the Router this is a redirection
+            $router->get($slug, [
+                '__savv_type' => 'redirect',
+                'url' => is_array($target) ? $target['url'] : $target,
+                'status' => is_array($target) ? ($target['status'] ?? 302) : 302
+            ]);
+        }
+    }
+
+    protected function compilePosts($router) {
+        $posts = config('posts') ?? [];  
+        foreach ($posts as $slug => $title) {
+            $router->get("{$slug}", [
+                '__savv_type' => 'post',
+                'slug' => $slug,
+                'view' => ROOT_PATH . '/views/pages/post-detail.php'
+            ]);
+        }
+    }
+}
+
+--- FILE: ./src/Console/Kernel.php ---
+
+<?php
+namespace Savv\Console;
+
+use Savv\Console\Commands\{RouteCache, MakeConfig, MakeController};
+
+class Kernel
+{
+    /**
+     * The framework's command registry.
+     */
+    protected array $commands = [
+        'make:controller' => MakeController::class,
+        'make:config'     => MakeConfig::class,
+        'route:cache'     => RouteCache::class,
+    ];
+
+    /**
+     * Handle the incoming console command.
+     */
+    public function handle(array $args): void
+    {
+        // $args[0] is the script name 'savv', $args[1] is the command name
+        $commandName = $args[1] ?? 'help';
+
+        if (!isset($this->commands[$commandName])) {
+            $this->printHelp();
+            return;
+        }
+
+        $class = $this->commands[$commandName];
+        $command = new $class();
+        
+        // Pass all arguments after the command name
+        $command->execute(array_slice($args, 2));
+    }
+
+    protected function printHelp(): void
+    {
+        echo "Savv Framework CLI\n";
+        echo "------------------\n";
+        echo "Available commands:\n";
+        foreach (array_keys($this->commands) as $name) {
+            echo "  - {$name}\n";
+        }
+    }
+}

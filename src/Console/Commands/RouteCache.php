@@ -43,37 +43,36 @@ class RouteCache
         $files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($viewDir));
         foreach ($files as $file) {
             if ($file->isDir() || $file->getExtension() !== 'php') continue;
-
+            
             $relative = str_replace([$viewDir, '.php'], '', $file->getPathname());
             $uri = trim($relative, '/');
             $uri = ($uri === 'index') ? '/' : $uri;
 
-            // Register as a dynamic view route
-            $router->get($uri, function() use ($file) {
-                require $file->getPathname();
-            });
+            // I use a "View Marker" instead of a Closure 
+            $router->get($uri, ['__savv_view' => $file->getPathname()]);
         }
     }
 
     protected function compileRedirections($router) {
-        $redirects = config('redirections') ?? [];
+        $redirects = config('redirections') ?? [];  
         foreach ($redirects as $slug => $target) {
-            $router->get($slug, function() use ($target) {
-                $url = is_array($target) ? $target['url'] : $target;
-                return response()->redirect($url, is_array($target) ? ($target['status'] ?? 302) : 302);
-            });
+            // A marker that tells the Router this is a redirection
+            $router->get($slug, [
+                '__savv_type' => 'redirect',
+                'url' => is_array($target) ? $target['url'] : $target,
+                'status' => is_array($target) ? ($target['status'] ?? 302) : 302
+            ]);
         }
     }
 
     protected function compilePosts($router) {
-        $posts = config('posts') ?? [];
+        $posts = config('posts') ?? [];  
         foreach ($posts as $slug => $title) {
-            // Map /post-slug to the post view
-            $router->get("{$slug}", function() use ($slug) {
-                // Pass slug to the view via global or request
-                $_GET['post_slug'] = $slug; 
-                require ROOT_PATH . '/views/pages/post-detail.php';
-            });
+            $router->get("{$slug}", [
+                '__savv_type' => 'post',
+                'slug' => $slug,
+                'view' => ROOT_PATH . '/views/pages/post-detail.php'
+            ]);
         }
     }
 }
