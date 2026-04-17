@@ -1,0 +1,28 @@
+{
+    "name": "savadub/savv",
+    "description": "The Savv PHP Framework - Lightweight, fast, and WordPress-friendly.",
+    "keywords": ["savadub", "framework", "php", "savv", "wordpress-fallback"],
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Savadub LLC",
+            "email": "developer@savadub.com"
+        }
+    ],
+    "require": {
+        "php": ">=8.0",
+        "vlucas/phpdotenv": "^5.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "Savv\\": "src/"
+        },
+        "files": [
+            "src/Helpers/helpers.php",
+            "src/Helpers/routes.php",
+            "src/Helpers/layouts.php"
+        ]
+    },
+    "minimum-stability": "stable"
+}

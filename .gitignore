@@ -1,0 +1,7 @@
+.env
+/.DevDocs
+/storage/*
+/.vscode
+/vendor/*
+full_codebase.txt
+project_structure.txt
