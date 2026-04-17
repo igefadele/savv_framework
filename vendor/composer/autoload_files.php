@@ -11,4 +11,5 @@ return array(
     'a4a119a56e50fbb293281d9a48007e0e' => $vendorDir . '/symfony/polyfill-php80/bootstrap.php',
     '0d0c35aaa2a61c572d2457a5cb069e58' => $baseDir . '/src/Helpers/helpers.php',
     'b2a45922b0573e03f847b9fb60924488' => $baseDir . '/src/Helpers/routes.php',
+    '80e54616a5a0516e4233f709562ce105' => $baseDir . '/src/Helpers/layouts.php',
 );

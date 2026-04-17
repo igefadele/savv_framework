@@ -20,7 +20,8 @@
         },
         "files": [
             "src/Helpers/helpers.php",
-            "src/Helpers/routes.php"
+            "src/Helpers/routes.php",
+            "src/Helpers/layouts.php"
         ]
     },
     "minimum-stability": "stable"
