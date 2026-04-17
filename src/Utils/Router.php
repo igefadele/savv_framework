@@ -259,12 +259,7 @@ class Router
         // This converts {slug} to named capture groups
         $regexUri = preg_replace('/\{([a-zA-Z]+)\}/', '(?P<$1>[a-zA-Z0-9_-]+)', $fullUri);
         
-        // Handle the root slash strictly
-        if ($regexUri === '/') {
-            $regexUri = "#^/$#";
-        } else {
-            $regexUri = "#^" . ltrim($regexUri, '/') . "$#";
-        }
+        $regexUri = "#^" . $regexUri . "$#";
 
         $method = strtoupper($method);
         
@@ -336,11 +331,7 @@ class Router
     public function dispatch(Request $request)
     {
         $method = $request->method();
-        $path = trim($request->path(), '/');
-
-        if (!isset($this->routes[$method])) {
-            return false;
-        }
+        $path = $request->path();
 
         // 1. Attempt to match registered routes (Explicit/Cached)
         foreach ($this->routes as $routeData) {
@@ -388,7 +379,7 @@ class Router
         $result = $pipeline($request);
 
         // Handle Response object if returned
-        if ($result instanceof \Savv\Utils\Response) {
+        if ($result instanceof Response) {
             $result->send();
         }
 
@@ -432,7 +423,7 @@ class Router
     */
     protected function resolveDynamicView(string $path)
     {
-        $slug = ($path === '') ? 'index' : $path;
+        $slug = ($path === '/' || $path === '') ? 'index' : ltrim($path, '/');
         $viewPath = ROOT_PATH . '/views/pages/' . $slug . '.php';
 
         if (file_exists($viewPath)) {
