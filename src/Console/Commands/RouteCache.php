@@ -48,8 +48,11 @@ class RouteCache
             $uri = trim($relative, '/');
             $uri = ($uri === 'index') ? '/' : $uri;
 
-            // I use a "View Marker" instead of a Closure 
-            $router->get($uri, ['__savv_view' => $file->getPathname()]);
+            // Use the same view marker format expected by Router::createRouteDestination()
+            $router->get($uri, [
+                '__savv_type' => 'view',
+                'path' => $file->getPathname()
+            ]);
         }
     }
 
@@ -70,8 +73,7 @@ class RouteCache
         foreach ($posts as $slug => $title) {
             $router->get("{$slug}", [
                 '__savv_type' => 'post',
-                'slug' => $slug,
-                'view' => ROOT_PATH . '/views/pages/post-detail.php'
+                'slug' => $slug
             ]);
         }
     }

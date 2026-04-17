@@ -248,20 +248,33 @@ class Router
         $prefix = $this->getCurrentPrefix();
         $fullUri = trim($prefix . '/' . trim($uri, '/'), '/');
         
+        // Ensure root path is represented as an empty string or single slash 
+        // depending on how your Request::path() returns the root.
+        $fullUri = $fullUri === '' ? '/' : $fullUri;
+
         // 2. Combine Name Prefixes
         $namePrefix = $this->getCurrentNamePrefix();
 
-        // 3. Convert to Regex (same as before)
-        $regexUri = preg_replace('/\{([a-zA-Z]+)\}/', '(?P<\1>[a-zA-Z0-9_-]+)', $fullUri);
-        $regexUri = "#^" . ($regexUri === '' ? '' : $regexUri) . "$#";
+        // 3. Convert to Regex
+        // This converts {slug} to named capture groups
+        $regexUri = preg_replace('/\{([a-zA-Z]+)\}/', '(?P<$1>[a-zA-Z0-9_-]+)', $fullUri);
+        
+        // Handle the root slash strictly
+        if ($regexUri === '/') {
+            $regexUri = "#^/$#";
+        } else {
+            $regexUri = "#^" . ltrim($regexUri, '/') . "$#";
+        }
 
+        $method = strtoupper($method);
+        
         $this->routes[] = [
-            'method'   => $method,
-            'uri'      => $regexUri,
-            'callback' => $callback,
-            'name'     => $namePrefix, // Store the accumulated name prefix
+            'method'       => $method,
+            'uri'          => $regexUri,
+            'callback'     => $callback,
+            'name'         => $namePrefix,
             'original_uri' => $fullUri,
-            'middleware' => $this->getCurrentMiddleware() // Store middleware
+            'middleware'   => $this->getCurrentMiddleware()
         ];
 
         return $this;
@@ -330,8 +343,12 @@ class Router
         }
 
         // 1. Attempt to match registered routes (Explicit/Cached)
-        foreach ($this->routes[$method] as $routePattern => $routeData) {
-            if (preg_match($routePattern, $path, $matches)) {
+        foreach ($this->routes as $routeData) {
+            if ($routeData['method'] !== $method) {
+                continue;
+            }
+
+            if (preg_match($routeData['uri'], $path, $matches)) {
                 return $this->runRoutePipeline($request, $routeData, $matches);
             }
         }
