@@ -1,5 +1,5 @@
 <?php
-namespace Savo\Utils;
+namespace Savv\Utils;
 
 /**
  * Loads and caches configuration arrays from the {@see ROOT_PATH}/configs directory.

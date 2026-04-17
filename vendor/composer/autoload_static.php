@@ -19,7 +19,7 @@ class ComposerStaticInit57274eaa4aa087b1b60f792066c1f91a
             'Symfony\\Polyfill\\Php80\\' => 23,
             'Symfony\\Polyfill\\Mbstring\\' => 26,
             'Symfony\\Polyfill\\Ctype\\' => 23,
-            'Savo\\' => 5,
+            'Savv\\' => 5,
         ),
         'P' => 
         array (
@@ -53,7 +53,7 @@ class ComposerStaticInit57274eaa4aa087b1b60f792066c1f91a
         array (
             0 => __DIR__ . '/..' . '/symfony/polyfill-ctype',
         ),
-        'Savo\\' => 
+        'Savv\\' => 
         array (
             0 => __DIR__ . '/../..' . '/savo',
         ),

@@ -1,5 +1,5 @@
 <?php 
-use Savo\Utils\{Request, Response, Config, Validator, Router, Log};
+use Savv\Utils\{Request, Response, Config, Validator, Router, Log};
 
 if (!function_exists('request')) {
     /**
@@ -10,7 +10,7 @@ if (!function_exists('request')) {
      *
      * @param string|null $key Input key to retrieve. Pass null to get the request object.
      * @param mixed $default Fallback value used when the key does not exist.
-     * @return \Savo\Utils\Request|mixed Request instance or resolved input value.
+     * @return \Savv\Utils\Request|mixed Request instance or resolved input value.
      */
     function request($key = null, $default = null) {
         static $instance = null;
@@ -30,7 +30,7 @@ if (!function_exists('response')) {
      *
      * @param string $content Initial response body content.
      * @param int $status HTTP status code for the response.
-     * @return \Savo\Utils\Response New response instance.
+     * @return \Savv\Utils\Response New response instance.
      */
     function response($content = '', $status = 200) {
         return new Response($content, $status);
@@ -103,7 +103,7 @@ if (!function_exists('route')) {
 /**
  * Resolve the shared router instance for route registration or URL generation.
  *
- * @return \Savo\Utils\Router The singleton router instance.
+ * @return \Savv\Utils\Router The singleton router instance.
  */
 if (!function_exists('router')) {
     function router() {
@@ -120,7 +120,7 @@ if (!function_exists('logger')) {
      *
      * @param string|null $message Message to write as an info log entry.
      * @param array<string, mixed> $context Structured log context.
-     * @return \Savo\Utils\Log|void Log instance when no message is supplied; otherwise nothing.
+     * @return \Savv\Utils\Log|void Log instance when no message is supplied; otherwise nothing.
      */
     function logger($message = null, array $context = []) {
         if (is_null($message)) {

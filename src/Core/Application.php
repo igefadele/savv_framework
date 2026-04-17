@@ -1,8 +1,8 @@
 <?php
-namespace Savo\Core;
+namespace Savv\Core;
 
-use Savo\Utils\Router;
-use Savo\Utils\Request;
+use Savv\Utils\Router;
+use Savv\Utils\Request;
 
 class Application {
     public static function bootstrap($rootPath) {
@@ -17,46 +17,62 @@ class Application {
     }
 
     public function run() {
-        // Load user routes from their project directory
-        $this->loadRoutes();
-        $this->registerRedirections();
+        $cacheFile = ROOT_PATH . '/storage/framework/routes.php';
+        $router = Router::getInstance();
+
+        if (file_exists($cacheFile)) {
+            $router->loadRawRoutes(require $cacheFile);
+        } else {
+            // Load user route files and redirections config from their project directory
+            $router->loadRouteFiles();
+            $router->registerRedirections();
+        } 
 
         $request = Request::capture();
         $handled = Router::getInstance()->dispatch($request);
 
         if (!$handled) {
-            $this->handleFallback($handled);
+            $this->handleExternalFallbacks();
         }
     }
 
-    protected function handleFallback($handled) {
-        if (!$handled && file_exists(__DIR__ . '/wp-blog-header.php')) {
-            require __DIR__ . '/wp-blog-header.php';
-        } elseif (!$handled) {
-            http_response_code(404);
-            echo "404 - Page Not Found";
-        }
-    }
-
-    protected function registerRedirections() 
+    /**
+     * Fallback:
+     * Iterates through external CMS installations defined in config.
+     */
+    protected function handleExternalFallbacks(): void
     {
-        // Use your existing config utility to pull the array
-        $redirects = config('redirections') ?? [];
-        $router = Router::getInstance();
+        $installations = config('installations') ?? [];
 
-        foreach ($redirects as $slug => $target) {
-            $router->get($slug, function() use ($target) {
-                // Handle both string URLs and detailed arrays
-                $url = is_array($target) ? $target['url'] : $target;
-                $status = is_array($target) ? ($target['status'] ?? 302) : 302;
-
-                return response()->redirect($url, $status);
-            });
+        foreach ($installations as $cms => $settings) {
+            // Only attempt if the installation is marked active
+            if (!empty($settings['active']) && file_exists($settings['path'])) {
+                
+                // For WordPress specifically, we require the header
+                // Note: We 'return' here because the CMS usually takes over the exit process
+                require $settings['path'];
+                return; 
+            }
         }
+
+        // Final 404 if no CMS claimed the request
+        $this->abort404();
     }
-    
-    protected function loadRoutes() {
-        if (file_exists(ROOT_PATH . '/routes/api.php')) require ROOT_PATH . '/routes/api.php';
-        if (file_exists(ROOT_PATH . '/routes/web.php')) require ROOT_PATH . '/routes/web.php';
+
+    /**
+     * Standard 404 handler if everything else fails.
+     */
+    protected function abort404(): void
+    {
+        http_response_code(404);
+        
+        // Check if user has a custom 404 view
+        $custom404 = ROOT_PATH . '/views/404.php';
+        if (file_exists($custom404)) {
+            require $custom404;
+        } else {
+            echo "404 - Page not found!.";
+        }
+        exit;
     }
 }

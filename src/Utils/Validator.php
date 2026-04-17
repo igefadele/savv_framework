@@ -1,5 +1,5 @@
 <?php
-namespace Savo\Utils;
+namespace Savv\Utils;
 
 /**
  * Performs lightweight rule-based validation on associative input arrays.

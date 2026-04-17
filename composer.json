@@ -1,7 +1,7 @@
 {
-    "name": "savadub/savo",
-    "description": "The Savo PHP Framework - Lightweight, fast, and WordPress-friendly.",
-    "keywords": ["savadub", "framework", "php", "savo", "wordpress-fallback"],
+    "name": "savadub/savv",
+    "description": "The Savv PHP Framework - Lightweight, fast, and WordPress-friendly.",
+    "keywords": ["savadub", "framework", "php", "savv", "wordpress-fallback"],
     "type": "library",
     "license": "MIT",
     "authors": [
@@ -16,7 +16,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Savo\\": "src/"
+            "Savv\\": "src/"
         },
         "files": [
             "src/Helpers/helpers.php"

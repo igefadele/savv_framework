@@ -1,5 +1,5 @@
 <?php 
-namespace Savo\Providers;
+namespace Savv\Providers;
 
 /**
  * Provides framework-level configuration that is shared across the core runtime.
@@ -15,8 +15,7 @@ class AppProvider
      *
      * @var array<string, class-string>
      */
-    protected static array $savoMiddlewareAliases = [ 
-    ];
+    protected static array $savoMiddlewareAliases = [];
 
     /**
      * Return every middleware alias available to the router.
@@ -28,6 +27,6 @@ class AppProvider
      */
     public static function middlewareAliases(): array
     {
-        return array_merge(self::$savoMiddlewareAliases, \App\Constants\MiddlewareConstants::$aliases);
+        return array_merge(self::$savoMiddlewareAliases, config('middlewares'));
     }
 }

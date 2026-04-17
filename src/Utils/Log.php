@@ -1,5 +1,5 @@
 <?php
-namespace Savo\Utils;
+namespace Savv\Utils;
 
 /**
  * Writes simple structured application logs to daily files in `storage/logs`.

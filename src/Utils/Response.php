@@ -1,5 +1,5 @@
 <?php 
-namespace Savo\Utils;
+namespace Savv\Utils;
 
 /**
  * Encapsulates an HTTP response payload, status code, and headers.

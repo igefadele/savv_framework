@@ -1,5 +1,5 @@
 <?php
-namespace Savo\Utils;
+namespace Savv\Utils;
 
 /**
  * Represents the current HTTP request using PHP superglobals as the data source.

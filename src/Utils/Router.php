@@ -1,8 +1,8 @@
 <?php
-namespace Savo\Utils;
+namespace Savv\Utils;
 
-use Savo\Providers\AppProvider;
-use Savo\Utils\{Response};
+use Savv\Providers\AppProvider;
+use Savv\Utils\{Response};
 
 /**
  * Registers routes, groups shared route attributes, resolves named URLs,
@@ -89,6 +89,52 @@ class Router
             }
         }
         return '#';
+    }
+
+    /**
+     * Scans the routes directory and loads every PHP file found.
+     */
+    public function loadRouteFiles(): void
+    {
+        $routeDir = ROOT_PATH . '/routes';
+
+        if (is_dir($routeDir)) {
+            $files = glob($routeDir . '/*.php');
+            foreach ($files as $file) {
+                require_once $file;
+            }
+        }
+    }
+
+    public function registerRedirections() 
+    {
+        $redirects = config('redirections') ?? [];
+        $router = Router::getInstance();
+
+        foreach ($redirects as $slug => $target) {
+            $router->get($slug, function() use ($target) {
+                $url = is_array($target) ? $target['url'] : $target;
+                $status = is_array($target) ? ($target['status'] ?? 302) : 302;
+
+                return response()->redirect($url, $status);
+            });
+        }
+    }
+
+    /**
+     * Load a pre-compiled array of routes (Used by Cache)
+     */
+    public function loadRawRoutes(array $routes): void
+    {
+        $this->routes = $routes;
+    }
+
+    /**
+     * Get all registered routes (Used to generate Cache)
+     */
+    public function getRoutes(): array
+    {
+        return $this->routes;
     }
 
     /**
@@ -315,7 +361,7 @@ class Router
             }
         }
 
-        // No route matched. We return false so index.php can handle the WP fallback.
+        // No route matched. We return false so index.php can handle the External CMS fallback.
         return false;
     }
 }

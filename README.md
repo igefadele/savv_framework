@@ -1,18 +1,18 @@
-# Savo Framework
+# Savv Web Framework
 
-Savo Framework is a lightweight PHP framework package for building brand websites, marketing websites, studio sites, landing pages, and other public-facing web experiences without the weight of a large full-stack framework.
+Savv Web Framework is a lightweight PHP framework package for building brand websites, marketing websites, studio sites, landing pages, and other public-facing web experiences without the weight of a large full-stack framework.
 
 It is built around plain modern PHP, direct logic, small utilities, and a familiar developer experience. The goal is to give developers the convenience and structure they expect from modern frameworks while keeping the codebase easy to understand, easy to trace, and easy to extend.
 
-Savo Framework is the core package.
+Savv Web Framework is the core package.
 
-If you want to start a new Savo application quickly, use **Savo Starter**, which is the starter skeleton project that already depends on this package and provides the app structure, routes, views, configs, and public entry setup.
+If you want to start a new Savv Web application quickly, use **Savv Web Starter**, which is the starter skeleton project that already depends on this package and provides the app structure, routes, views, configs, and public entry setup.
 
 ## Package Model
 
-Savo is split into two parts:
+Savv Web is split into two parts:
 
-### 1. Savo Framework
+### 1. Savv Web Framework
 
 This repository contains the installable framework package.
 
@@ -31,9 +31,9 @@ It provides the core runtime and utilities such as:
 
 The framework is installed as a Composer dependency and lives inside `vendor/` in a real application.
 
-### 2. Savo Starter
+### 2. Savv Web Starter
 
-This is the starter project developers download when they want to create a new Savo app.
+This is the starter project developers download when they want to create a new Savv Web app.
 
 It contains the application-level structure, typically things like:
 
@@ -45,9 +45,9 @@ It contains the application-level structure, typically things like:
 - environment setup
 - starter assets and example pages
 
-The starter project already includes Savo Framework as a dependency, so developers can begin building immediately.
+The starter project already includes Savv Web Framework as a dependency, so developers can begin building immediately.
 
-## Why Savo
+## Why Savv Web
 
 - Lightweight core with minimal overhead
 - Built for real websites, not bloated application scaffolding
@@ -60,7 +60,7 @@ The starter project already includes Savo Framework as a dependency, so develope
 
 ## Best Use Cases
 
-Savo Framework is especially suitable for:
+Savv Web Framework is especially suitable for:
 
 - brand websites
 - marketing sites
@@ -71,16 +71,16 @@ Savo Framework is especially suitable for:
 - websites with a few dynamic endpoints
 - public-facing web apps that do not need a heavy framework
 
-If you need a deeply layered enterprise framework with a large built-in ecosystem, Savo may not be the right tool. Savo is optimized for clarity, speed, and low complexity.
+If you need a deeply layered enterprise framework with a large built-in ecosystem, Savv Web may not be the right tool. Savv Web is optimized for clarity, speed, and low complexity.
 
 ## Installation
 
 ### Install via Packagist
 
-Install Savo Framework with:
+Install Savv Web Framework with:
 
 ```bash
-composer require savadub/savo
+composer require savadub/savv
 ```
 
 ### Install via GitHub Repository URL
@@ -96,7 +96,7 @@ Developers can also install the framework directly from its GitHub repository by
     }
   ],
   "require": {
-    "savadub/savo": "dev-main"
+    "savadub/savv": "dev-main"
   }
 }
 ```
@@ -109,18 +109,18 @@ composer update
 
 ## Recommended Way to Start a New Project
 
-The recommended way to begin a new Savo project is to use **Savo Starter**, not this package repository directly.
+The recommended way to begin a new Savv Web project is to use **Savv Web Starter**, not this package repository directly.
 
 Why:
 
 - the starter already has the correct folder structure
-- the starter already depends on Savo Framework
+- the starter already depends on Savv Web Framework
 - the starter includes the app-level files developers are expected to edit
 - developers can begin building pages and features immediately
 
 Suggested flow:
 
-1. Download or clone `Savo Starter` from `https://github.com/igefadele/savo_starter`
+1. Download or clone `Savv Web Starter` from `https://github.com/igefadele/savo_starter`
 2. Run `composer install`
 3. Configure environment values
 4. Point the server document root to `public/`
@@ -128,7 +128,7 @@ Suggested flow:
 
 ## Framework Responsibilities
 
-Savo Framework is responsible for the reusable core logic that powers Savo applications.
+Savv Web Framework is responsible for the reusable core logic that powers Savv Web applications.
 
 That includes:
 
@@ -145,7 +145,7 @@ This separation keeps application code out of the framework package and makes th
 
 ## Starter Project Responsibilities
 
-Savo Starter is where developers build their real applications.
+Savv Web Starter is where developers build their real applications.
 
 That project should hold the project-specific code such as:
 
@@ -161,15 +161,15 @@ That project should hold the project-specific code such as:
 
 In other words:
 
-- **Savo Framework** provides the engine
-- **Savo Starter** provides the starting app shell
+- **Savv Web Framework** provides the engine
+- **Savv Web Starter** provides the starting app shell
 
 ## Typical Architecture
 
-In a real Savo project, the structure now looks more like this:
+In a real Savv Web project, the structure now looks more like this:
 
 ```text
-my-savo-app/
+my-savv-app/
 app/
 configs/
 public/
@@ -177,7 +177,7 @@ routes/
 views/
 vendor/
   savadub/
-    savo/
+    savv/
 ```
 
 ## Bootstrap Flow
@@ -193,11 +193,11 @@ The framework boots through [public/index.php](/Users/MrFIA/Documents/WORKSPACE/
 
 ## Routing
 
-Savo supports two routing styles.
+Savv Web supports two routing styles.
 
 ### 1. File-Based Page Routing
 
-The default web routing flow is intentionally simple. If a request comes in for `/about`, Savo looks for:
+The default web routing flow is intentionally simple. If a request comes in for `/about`, Savv Web looks for:
 
 ```text
 views/about.php
@@ -257,7 +257,7 @@ $url = route('blog.show', ['slug' => 'hello-world']);
 
 ## Middleware
 
-Savo supports route middleware and middleware groups.
+Savv Web supports route middleware and middleware groups.
 
 ### Register Middleware Aliases
 
@@ -297,7 +297,7 @@ router()->post('contact', [ContactController::class, 'submit'])
 ```php
 namespace App\Middleware;
 
-use Savo\Utils\Request;
+use Savv Web\Utils\Request;
 
 class Authenticate
 {
@@ -314,7 +314,7 @@ class Authenticate
 
 ## Helpers
 
-Savo ships with a small set of global helpers in [savo/Helpers/helpers.php](/Users/MrFIA/Documents/WORKSPACE/WORDPRESS/savadub/savo/Helpers/helpers.php:1).
+Savv Web ships with a small set of global helpers in [savv/Helpers/helpers.php](/Users/MrFIA/Documents/WORKSPACE/WORDPRESS/savadub/savv/Helpers/helpers.php:1).
 
 ### `request()`
 
@@ -332,7 +332,7 @@ Creates a response object.
 
 ```php
 return response('<h1>Hello World</h1>', 200)
-    ->header('X-Powered-By', 'Savo');
+    ->header('X-Powered-By', 'Savv Web');
 
 return response()->json([
     'status' => 'success',
@@ -393,7 +393,7 @@ logger()->error('Mail failed', ['reason' => 'SMTP timeout']);
 
 ### Request
 
-[savo/Utils/Request.php](/Users/MrFIA/Documents/WORKSPACE/WORDPRESS/savadub/savo/Utils/Request.php:1) provides:
+[savv/Utils/Request.php](/Users/MrFIA/Documents/WORKSPACE/WORDPRESS/savadub/savv/Utils/Request.php:1) provides:
 
 - `input()`
 - `all()`
@@ -408,7 +408,7 @@ logger()->error('Mail failed', ['reason' => 'SMTP timeout']);
 
 ### Response
 
-[savo/Utils/Response.php](/Users/MrFIA/Documents/WORKSPACE/WORDPRESS/savadub/savo/Utils/Response.php:1) provides:
+[savv/Utils/Response.php](/Users/MrFIA/Documents/WORKSPACE/WORDPRESS/savadub/savv/Utils/Response.php:1) provides:
 
 - `setStatus()`
 - `header()`
@@ -419,11 +419,11 @@ logger()->error('Mail failed', ['reason' => 'SMTP timeout']);
 
 ### Config
 
-[savo/Utils/Config.php](/Users/MrFIA/Documents/WORKSPACE/WORDPRESS/savadub/savo/Utils/Config.php:1) loads plain PHP arrays from `configs/` and caches them per request.
+[savv/Utils/Config.php](/Users/MrFIA/Documents/WORKSPACE/WORDPRESS/savadub/savv/Utils/Config.php:1) loads plain PHP arrays from `configs/` and caches them per request.
 
 ### Validator
 
-[savo/Utils/Validator.php](/Users/MrFIA/Documents/WORKSPACE/WORDPRESS/savadub/savo/Utils/Validator.php:1) supports:
+[savv/Utils/Validator.php](/Users/MrFIA/Documents/WORKSPACE/WORDPRESS/savadub/savv/Utils/Validator.php:1) supports:
 
 - `required`
 - `email`
@@ -434,7 +434,7 @@ logger()->error('Mail failed', ['reason' => 'SMTP timeout']);
 
 ### Log
 
-[savo/Utils/Log.php](/Users/MrFIA/Documents/WORKSPACE/WORDPRESS/savadub/savo/Utils/Log.php:1) writes daily log files to:
+[savv/Utils/Log.php](/Users/MrFIA/Documents/WORKSPACE/WORDPRESS/savadub/savv/Utils/Log.php:1) writes daily log files to:
 
 ```text
 storage/logs/YYYY-MM-DD.log
@@ -442,7 +442,7 @@ storage/logs/YYYY-MM-DD.log
 
 ## Configs
 
-Savo configs are plain PHP arrays stored in `configs/`.
+Savv Web configs are plain PHP arrays stored in `configs/`.
 
 Example from [configs/mail.php](/Users/MrFIA/Documents/WORKSPACE/WORDPRESS/savadub/configs/mail.php:1):
 
@@ -482,7 +482,7 @@ What it does:
 
 ## Pretty Links (Redirections)
 
-Savo supports built-in URL redirections. 
+Savv Web supports built-in URL redirections. 
 You need to create a `configs/redirections.php` file to manage your short-links.
 
 ```php
@@ -503,7 +503,7 @@ Views are standard PHP files inside `views/`.
 Most pages in this starter project follow this pattern:
 
 ```php
-$pageTitle = 'About — Savo';
+$pageTitle = 'About — Savv Web';
 $pageDescription = '...';
 $extraCSS = '<link rel="stylesheet" href="/assets/css/about.css">';
 
@@ -545,7 +545,7 @@ composer dump-autoload
 
 ## Developer Experience
 
-Savo aims to feel familiar without becoming heavy.
+Savv Web aims to feel familiar without becoming heavy.
 
 Developers can expect:
 
@@ -561,7 +561,7 @@ The framework is intentionally designed so that someone coming from Laravel-like
 
 ## Philosophy
 
-Savo is for developers who want:
+Savv Web is for developers who want:
 
 - less boilerplate
 - less abstraction
@@ -570,14 +570,14 @@ Savo is for developers who want:
 - more direct control
 - a framework focused on modern websites
 
-Savo does not try to do everything.
+Savv Web does not try to do everything.
 
 It tries to do the important website-building things clearly, cleanly, and without getting in your way.
 
 ## In Short
 
-Use this repository when you want the **Savo Framework package** itself.
+Use this repository when you want the **Savv Web Framework package** itself.
 
-Use **Savo Starter** when you want to begin building a real Savo application.
+Use **Savv Web Starter** when you want to begin building a real Savv Web application.
 
 
