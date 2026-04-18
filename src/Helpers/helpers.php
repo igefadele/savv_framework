@@ -61,6 +61,26 @@ function view_path($path = '') {
 }
 
 /**
+ * Build an absolute path to a file within the root `views/pages/` directory.
+ *
+ * @param string $path Optional relative path inside the views directory.
+ * @return string Absolute filesystem path to the requested view page location.
+ */
+function page_path($path = '') {
+    return ROOT_PATH . '/views/pages' . ($path ? DIRECTORY_SEPARATOR . $path : $path);
+}
+
+/**
+ * Build an absolute path to a file within the root `views/posts/` directory.
+ *
+ * @param string $path Optional relative path inside the views directory.
+ * @return string Absolute filesystem path to the requested view post location.
+ */
+function post_path($path = '') {
+    return ROOT_PATH . '/views/posts' . ($path ? DIRECTORY_SEPARATOR . $path : $path);
+}
+
+/**
  * Validate an input array and immediately terminate with a JSON error payload on failure.
  *
  * The returned array is reduced to only the keys defined in the rules array, which

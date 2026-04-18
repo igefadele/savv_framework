@@ -18,8 +18,6 @@ function savv_head() {
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="apple-touch-icon" href="<?= $appIcon ?>">
 
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css">
 <?php
 }
@@ -35,9 +33,7 @@ function savv_scripts() {
     $root = ROOT_PATH ?: '';
 
     ?>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
-
 <script src="https://unpkg.com/swup@4"></script>
 <script src="https://unpkg.com/@swup/head-plugin@2"></script>
 <script src="https://unpkg.com/@swup/scroll-plugin@3"></script>
@@ -45,11 +41,11 @@ function savv_scripts() {
 <script>
 (function() {
     /**
-     * INTERNAL UI LOGIC
-     * Handles AOS and Counter animations out of the box.
+     * INTERNAL UI RE-INITIALIZATION
+     * Safely checks for AOS, Counters, and Bootstrap.
      */
     const runSavvInternalUI = () => {
-        // 1. Initialize AOS
+        // 1. AOS (Silent Check)
         if (typeof AOS !== 'undefined') {
             AOS.init({
                 duration: 700,
@@ -59,54 +55,59 @@ function savv_scripts() {
             });
         }
 
-        // 2. Initialize Counters (Intersection Observer)
-        const counters = document.querySelectorAll('.counter-element');
-        if (counters.length > 0 && 'IntersectionObserver' in window) {
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const el = entry.target;
-                        const target = parseInt(el.getAttribute('data-target')) || 0;
-                        const duration = 2000;
-                        let start = 0;
-                        const step = (timestamp) => {
-                            if (!start) start = timestamp;
-                            const progress = Math.min((timestamp - start) / duration, 1);
-                            el.innerText = Math.floor(progress * target);
-                            if (progress < 1) window.requestAnimationFrame(step);
-                        };
-                        window.requestAnimationFrame(step);
-                        observer.unobserve(el);
-                    }
-                });
-            }, {
-                threshold: 0.5
+        // 2. Bootstrap Dropdown Re-hydration (Awareness, not Dependency)
+        // If the user included Bootstrap, we ensure dropdowns work after Swup transitions.
+        if (typeof bootstrap !== 'undefined' && bootstrap.Dropdown) {
+            document.querySelectorAll('.dropdown-toggle').forEach(el => {
+                const existing = bootstrap.Dropdown.getInstance(el);
+                if (existing) existing.dispose();
+                new bootstrap.Dropdown(el);
             });
-            counters.forEach(el => observer.observe(el));
         }
-    };
 
+
+        /**
+         * 3. THE SAVV WAY: Dispatch a custom event.
+         * Users can listen for 'savv:init' in their own scripts to 
+         * re-run their logic (like counters) after a page swap.
+         */
+        document.dispatchEvent(new CustomEvent('savv:init'));
+    };
 
     // Initialize SPA Engine
     if (typeof Swup !== 'undefined') {
         const swup = new Swup({
+            containers: ["#savv"],
             plugins: [new SwupHeadPlugin(), new SwupScrollPlugin({
                 doScrolling: true,
                 animateScroll: true
             })],
             ignoreVisit: (url, {
                 el
-            }) => el?.closest('[data-no-swup]') || url === window.location.href
+            }) => {
+                // Ignore elements with data-no-swup or hash links
+                if (el?.closest('[data-no-swup]')) return true;
+                const href = el?.getAttribute('href');
+                if (href && (href.startsWith('#') || href.includes('#'))) return true;
+                return url === window.location.href;
+            }
         });
 
-        // Re-run Internal UI logic on every page swap
         swup.hooks.on('page:view', () => {
-            if (typeof AOS !== 'undefined') AOS.init();
-            window.scrollTo(0, 0);
             runSavvInternalUI();
 
-            // Allow user-defined hooks if they exist, but don't depend on them
-            if (typeof window.initPageScripts === 'function') window.initPageScripts();
+            // Handle scrolling
+            const hash = window.location.hash;
+            if (hash) {
+                setTimeout(() => {
+                    const target = document.querySelector(hash);
+                    if (target) target.scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                }, 100);
+            } else {
+                window.scrollTo(0, 0);
+            }
         });
     }
 
@@ -116,23 +117,27 @@ function savv_scripts() {
             navigator.serviceWorker.register('/sw.js', {
                     scope: '<?= $root ?>/'
                 })
-                .then(reg => console.log('<?= $name ?> Service Worker Active'))
+                .then(reg => console.log('<?= $name ?> PWA Active'))
                 .catch(err => console.error('PWA Error:', err));
         });
-
-        navigator.serviceWorker.addEventListener("controllerchange", () => {
-            console.log("New version available, reloading...");
-            window.location.reload();
-        });
+        navigator.serviceWorker.addEventListener("controllerchange", () => window.location.reload());
     }
 
-    // Catch-all for # links
+    // Global Click Listener: Fixes '#' Jump while allowing Bootstrap Dropdowns
     document.addEventListener('click', (e) => {
         const target = e.target.closest('a');
-        if (target && target.getAttribute('href') === '#') e.preventDefault();
+        if (!target) return;
+        const href = target.getAttribute('href');
+
+        if (href === '#') {
+            // Only stop default if it's NOT a toggle (like a dropdown)
+            // This prevents the jump-to-top without breaking JS events
+            if (!target.hasAttribute('data-bs-toggle')) {
+                e.preventDefault();
+            }
+        }
     });
 
-    // Initial Run
     document.addEventListener('DOMContentLoaded', runSavvInternalUI);
 })();
 </script>

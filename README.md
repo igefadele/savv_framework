@@ -380,7 +380,6 @@ Call before `</body>`. Injects:
 - Bootstrap 5 JS bundle (CDN)
 - AOS JS — auto-initialized (700ms, ease-out-cubic, once, offset 60)
 - Swup with HeadPlugin and ScrollPlugin — SPA-feel page transitions
-- Counter animation engine — targets `.counter-element[data-target="N"]` on scroll into view
 - PWA service worker registration
 - Re-runs AOS and counters on every Swup page swap
 - Calls `window.initPageScripts()` on each page swap if defined
@@ -391,7 +390,7 @@ Call before `</body>`. Injects:
 </body>
 ```
 
-After this, your site has SPA-feel navigation, scroll animations, animated counters, and a fully registered PWA — no extra JavaScript written.
+After this, your site has SPA-feel navigation, and a fully registered PWA — no extra JavaScript written.
 
 ---
 
@@ -416,12 +415,144 @@ $content = ob_get_clean();
 include ROOT_PATH . '/views/layouts/index.php';
 ```
 
-The layout wraps `$content` with your header, footer, and script partials. A `view_path()` helper is also available:
+The layout wraps `$content` with your header, footer, and script partials. Also `view_path()`, `view_page()`, and `view_post()` helper are also available:
 
 ```php
 $path = view_path('pages/about.php');
 // → /absolute/root/views/pages/about.php
 ```
+
+Or
+
+```php
+$path = page_path('about.php');
+// → /absolute/root/views/pages/about.php
+```
+
+And if it's a post:
+
+```php
+$path = post_path('how-to-savv-website.md');
+// → /absolute/root/views/posts/how-to-savv-website.md
+```
+---
+### The #savv ID
+
+#### Note this if you do not use the Savv Starter project:
+
+It's IMPORTANT you wrap your main element or outermost container in #savv
+This is for your app/page to benefit from the SPA feel and SSG-like navigation speed that Savv provides. If you use the Starter project then you don't need to care as this is already added there in the /views/layouts/inde.php, like:
+
+```php
+    <main id="savv" class="transition-fade">
+        <?php echo $content; ?>
+    </main>
+```
+
+---
+
+
+## The `savv:init` Event
+
+Savv dispatches a custom browser event called `savv:init` every time a page is initialized.
+
+This happens in two scenarios:
+
+1. **On the initial page load**
+2. **After Savv dynamically swaps page content (client-side navigation)**
+
+---
+
+### Why This Matters
+
+Because Savv performs partial page updates without full reloads, any JavaScript that relies on DOM elements needs to be re-initialized after each page swap.
+
+Instead of relying on `DOMContentLoaded` (which only fires once), Savv provides a consistent lifecycle hook:
+
+> **`savv:init` = "The page is ready. Run your UI logic now."**
+
+---
+
+### How It Works Internally
+
+Savv dispatches the event like this:
+
+```js
+document.dispatchEvent(new CustomEvent('savv:init'));
+```
+
+This fires automatically on initial load and after every Swup page transition. You never call it yourself — just listen for it.
+
+---
+
+### Usage Example
+
+Define your application logic in a reusable function:
+
+```js
+// Runs on initial load AND after every page swap
+const myAppLogic = () => {
+    console.log('Savv page ready. Initializing components...');
+
+    // Example: initialize counters, sliders, tooltips, etc.
+    const counters = document.querySelectorAll('.counter-element');
+    // ... your component logic here
+};
+```
+
+Then listen for the event:
+
+```js
+document.addEventListener('savv:init', myAppLogic);
+```
+
+---
+
+### Best Practices
+
+- Wrap all DOM-dependent logic inside a named function
+- Always bind to `savv:init` instead of `DOMContentLoaded`
+- Keep your logic **idempotent** — safe to run multiple times without side effects
+- Avoid registering new event listeners *inside* your logic function, as it will run on every page swap
+
+---
+
+### Common Mistake
+
+❌ This only runs once and will miss all subsequent page swaps:
+
+```js
+document.addEventListener('DOMContentLoaded', myAppLogic);
+```
+
+✅ This runs correctly on every page load and navigation:
+
+```js
+document.addEventListener('savv:init', myAppLogic);
+```
+
+---
+
+### When Should You Use This?
+
+Use `savv:init` whenever your code depends on:
+
+- DOM elements (counters, modals, accordions, sliders)
+- UI libraries (carousels, tooltips, date pickers)
+- Rebinding event listeners after navigation
+- Re-initializing any third-party plugin
+
+---
+
+### Summary
+
+| Event | Fires When | Use Case |
+|---|---|---|
+| `DOMContentLoaded` | Once on initial page load | Traditional multi-page websites |
+| `savv:init` | Every page load + every page swap | Savv-powered applications |
+
+By using `savv:init`, your frontend logic stays consistent, predictable, and fully compatible with Savv's dynamic navigation system.
+
 
 ---
 
