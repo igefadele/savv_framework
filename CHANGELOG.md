@@ -6,6 +6,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [2.3.1] — 2026-04-17
+
+### FIXED
+
+- **PWA Engine - Automated manifest and service worker discovery.
+
+
 ## [2.1.0] — 2026-04-17
 
 ### Added
@@ -25,7 +32,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- **Namespace** — All framework classes moved from the old `Savv Web\` namespace to `Savv\`. Composer autoload PSR-4 prefix updated to `"Savv\\": "src/"`.
+- **Namespace** — All framework classes moved from the old `Savo\` namespace to `Savv\`. Composer autoload PSR-4 prefix updated to `"Savv\\": "src/"`.
 - **Source directory** — All framework source files relocated from `savv/` to `src/`. File paths are now `src/Utils/Router.php`, `src/Helpers/helpers.php`, etc.
 - **Middleware configuration** — Middleware aliases moved from `app/Constants/MiddlewareConstants.php` (user-space) to `configs/middlewares.php` (config layer), resolved by `AppProvider::middlewareAliases()`.
 - **Bootstrap flow** — `Application::run()` now checks for a route cache before loading route files. Redirections are registered after route files when running in dynamic mode.
