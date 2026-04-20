@@ -6,11 +6,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
-## [2.3.1] — 2026-04-17
+## [2.4.0] — 2026-04-20
 
-### FIXED
+### Added
 
-- **PWA Engine - Automated manifest and service worker discovery.
+- **Asset Loading: Further optimised the asset loading helpers and router for more faster asset loading time.
 
 
 ## [2.1.0] — 2026-04-17
