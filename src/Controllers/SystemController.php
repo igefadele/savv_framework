@@ -99,4 +99,57 @@ return null;
 <?php
         exit;
     }
+
+
+    public function serveAsset($path) {
+        // 1. Construct the full system path
+        // Ensure we sanitize this to prevent directory traversal attacks!
+        $fullPath = ROOT_PATH . '/assets/' . $path;
+        
+        // Ensure the file is actually inside the assets folder
+        if (!file_exists($fullPath) || is_dir($fullPath)) {
+            abort(404, 'Asset not found');
+        }
+
+        // 2. Determine Mime Type
+        $extension = pathinfo($fullPath, PATHINFO_EXTENSION);
+        $mimes = [
+            'css'   => 'text/css',
+            'js'    => 'application/javascript',
+            'png'   => 'image/png',
+            'jpg'   => 'image/jpeg',
+            'jpeg'  => 'image/jpeg',
+            'woff'  => 'font/woff',
+            'woff2' => 'font/woff2',
+            'svg'   => 'image/svg+xml'
+        ];
+        $contentType = $mimes[$extension] ?? 'application/octet-stream';
+
+        // 3. Inject "Zero-Config" Cache Headers
+        // max-age is in seconds (31536000 = 1 year)
+        header("Content-Type: $contentType");
+        header("Cache-Control: public, max-age=31536000, immutable");
+        header("Expires: " . gmdate("D, d M Y H:i:s", time() + 31536000) . " GMT");
+        
+        // 4. Stream the file
+        readfile($fullPath);
+        exit;
+    }
+
+
+    public function getLocalAsset(string $path) { 
+        $fileName = str_replace('savv-assets/', '', $path);
+        $extension = pathinfo($fileName, PATHINFO_EXTENSION);
+        
+        // Path to savv's internal assets
+
+        $filePath = __DIR__ . '/../assets/' . $extension . '/' . $fileName;
+
+        if (file_exists($filePath)) {
+            $mimeType = ($extension === 'css') ? 'text/css' : 'application/javascript';
+            header("Content-Type: $mimeType");
+            readfile($filePath);
+            exit;
+        } 
+    }
 }

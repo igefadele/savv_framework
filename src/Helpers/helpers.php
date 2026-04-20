@@ -150,3 +150,31 @@ if (!function_exists('logger')) {
         Log::info($message, $context);
     }
 }
+
+/**
+ * Resolves an asset's web path and appends a versioning timestamp.
+ * Automatically looks within the public directory and assumes the /assets prefix.
+ * * @param string $path The path relative to the assets folder (e.g., '/css/main.css')
+ * @return string The versioned web path
+ */
+function asset($path) {
+    // 1. Detection of public root (Shared Hosting vs VPS)
+    $publicDir = file_exists(ROOT_PATH . '/public_html') ? 'public_html' : 'public';
+    
+    // 2. Normalize the input path (ensure leading slash, remove redundancy)
+    $cleanPath = '/' . ltrim($path, '/');
+    
+    // 3. Absolute system path for the server to check file modified time
+    $systemPath = ROOT_PATH . '/' . $publicDir . '/assets' . $cleanPath;
+    
+    // 4. Public web path for the browser
+    $webPath = '/assets' . $cleanPath;
+
+    if (file_exists($systemPath)) {
+        // Appends the Unix timestamp of the last edit
+        return $webPath . '?v=' . filemtime($systemPath);
+    }
+
+    // Fallback if file doesn't exist (returns the path without versioning)
+    return $webPath;
+}

@@ -18,7 +18,10 @@ function savv_head() {
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="apple-touch-icon" href="<?= $appIcon ?>">
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css">
+<link rel="stylesheet" href="/savv-assets/aos-2.3.4.min.css">
+
+<!-- CDN CDN EQUIVALENT -->
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css"> -->
 <?php
 }
 
@@ -31,12 +34,18 @@ function savv_scripts() {
     $pwa = config('pwa');
     $name = $pwa['short_name'] ?? 'Savv';
     $root = ROOT_PATH ?: '';
+?>
 
-    ?>
-<script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
-<script src="https://unpkg.com/swup@4"></script>
+<script src="/savv-assets/aos-2.3.4.min.js"></script>
+<script src="/savv-assets/swup-4.6.1.min.js"></script>
+<script src="/savv-assets/swup-head-plugin-2.3.1.min.js"></script>
+<script src="/savv-assets/swup-scroll-plugin-4.0.0.min.js"></script>
+
+<!-- THE CDN EQUIVALENT -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
+<script src="https://unpkg.com/swup@4.6.1/dist/Swup.umd.js"></script>
 <script src="https://unpkg.com/@swup/head-plugin@2"></script>
-<script src="https://unpkg.com/@swup/scroll-plugin@3"></script>
+<script src="https://unpkg.com/@swup/scroll-plugin@4"></script> -->
 
 <script>
 (function() {

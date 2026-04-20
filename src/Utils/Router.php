@@ -342,6 +342,10 @@ class Router
                 if ($filePath === 'sw.js') return $controller->getServiceWorkerFile();
                 if ($filePath === 'manifest.json') return $controller->getManifestFile();
             }
+
+            if (strpos($filePath, 'savv-assets/') === 0) {
+                return $controller->getLocalAsset($filePath);
+            }
         }
 
         $path = $request->path();
