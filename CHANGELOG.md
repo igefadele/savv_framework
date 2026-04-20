@@ -6,6 +6,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [2.4.1] - 2026-04-20
+
+### Added
+
+- **Helpers - abort() helper function.
+
+
 ## [2.4.0] — 2026-04-20
 
 ### Added
