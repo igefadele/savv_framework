@@ -178,3 +178,21 @@ function asset($path) {
     // Fallback if file doesn't exist (returns the path without versioning)
     return $webPath;
 }
+
+/** 
+ * Return an error file or show the error message and set the error code.
+*/
+function abort($code = 404, $message = '') {
+    http_response_code($code);
+    
+    // Look for a custom error page in the user's views
+    $errorPage = ROOT_PATH . "/views/errors/{$code}.php";
+    
+    if (file_exists($errorPage)) {
+        require $errorPage;
+    } else {
+        echo "<h1>{$code}</h1><p>{$message}</p>";
+    }
+    
+    exit;
+}
