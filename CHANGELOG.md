@@ -6,6 +6,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [2.4.2] - 2026-04-21
+
+### FIXED
+
+- **Helpers - asset() helper | To use PUBLIC_PATH global constant directly
+
 ## [2.4.1] - 2026-04-20
 
 ### Added
