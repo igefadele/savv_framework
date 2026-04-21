@@ -158,16 +158,13 @@ if (!function_exists('logger')) {
  * @return string The versioned web path
  */
 function asset($path) {
-    // 1. Detection of public root (Shared Hosting vs VPS)
-    $publicDir = file_exists(ROOT_PATH . '/public_html') ? 'public_html' : 'public';
-    
-    // 2. Normalize the input path (ensure leading slash, remove redundancy)
+    // 1. Normalize the input path (ensure leading slash, remove redundancy)
     $cleanPath = '/' . ltrim($path, '/');
     
-    // 3. Absolute system path for the server to check file modified time
-    $systemPath = ROOT_PATH . '/' . $publicDir . '/assets' . $cleanPath;
+    // 2. Absolute system path for the server to check file modified time
+    $systemPath = PUBLIC_PATH . '/assets' . $cleanPath;
     
-    // 4. Public web path for the browser
+    // 3. Public web path for the browser
     $webPath = '/assets' . $cleanPath;
 
     if (file_exists($systemPath)) {
