@@ -5,6 +5,13 @@ All notable changes to the Savv Web Framework are documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [2.4.3] - 2026-04-22
+
+### Changed
+
+- **Systemcontroller - getLocalAsset() | Optimised the cache expiration date
+- **Systemcontroller - getServiceWorkerFile() | Updated the cache content addition to a safer logic if any precache value is missing from the user app.
+
 
 ## [2.4.2] - 2026-04-21
 

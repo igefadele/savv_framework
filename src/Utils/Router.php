@@ -331,6 +331,7 @@ class Router
     public function dispatch(Request $request)
     {
         $method = $request->method();
+        $controller = new \Savv\Controllers\SystemController();
 
         // FAST-PASS: Intercept PWA System Assets
         // Bypasses regex loop and dynamic discovery for performance and reliability
@@ -338,7 +339,7 @@ class Router
             // Ensure we have a clean path for comparison
             $filePath = ltrim($request->path() ?: '/', '/');
             if ($filePath === 'sw.js' || $filePath === 'manifest.json') {
-                $controller = new \Savv\Controllers\SystemController();
+                
                 if ($filePath === 'sw.js') return $controller->getServiceWorkerFile();
                 if ($filePath === 'manifest.json') return $controller->getManifestFile();
             }

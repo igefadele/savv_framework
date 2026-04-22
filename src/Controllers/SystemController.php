@@ -39,11 +39,15 @@ const OFFLINE_URL = '/offline';
 const PRECACHE_URLS = <?= $precache ?>;
 
 self.addEventListener('install', (event) => {
-event.waitUntil((async () => {
-const cache = await caches.open(CACHE_NAME);
-await cache.addAll(PRECACHE_URLS);
-await self.skipWaiting();
-})());
+    event.waitUntil((async () => {
+        const cache = await caches.open(CACHE_NAME);
+        await Promise.allSettled(
+            PRECACHE_URLS.map(url => 
+                cache.add(url).catch(err => console.warn(`Failed to cache: ${url}`, err))
+            )
+        );
+        await self.skipWaiting();
+    })());
 });
 
 self.addEventListener('activate', (event) => {
@@ -148,6 +152,9 @@ return null;
         if (file_exists($filePath)) {
             $mimeType = ($extension === 'css') ? 'text/css' : 'application/javascript';
             header("Content-Type: $mimeType");
+            // max-age is in seconds (31536000 = 1 year)
+            header("Cache-Control: public, max-age=31536000, immutable");
+            header("Expires: " . gmdate("D, d M Y H:i:s", time() + 31536000) . " GMT");
             readfile($filePath);
             exit;
         } 
