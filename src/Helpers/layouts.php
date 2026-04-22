@@ -36,10 +36,10 @@ function savv_scripts() {
     $root = ROOT_PATH ?: '';
 ?>
 
-<script src="/savv-assets/aos-2.3.4.min.js"></script>
-<script src="/savv-assets/swup-4.6.1.min.js"></script>
-<script src="/savv-assets/swup-head-plugin-2.3.1.min.js"></script>
-<script src="/savv-assets/swup-scroll-plugin-4.0.0.min.js"></script>
+<script src="/savv-assets/aos-2.3.4.min.js" defer></script>
+<script src="/savv-assets/swup-4.6.1.min.js" defer></script>
+<script src="/savv-assets/swup-head-plugin-2.3.1.min.js" defer></script>
+<script src="/savv-assets/swup-scroll-plugin-4.0.0.min.js" defer></script>
 
 <!-- THE CDN EQUIVALENT -->
 <!-- <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>

@@ -5,6 +5,13 @@ All notable changes to the Savv Web Framework are documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [2.4.4] - 2026-04-22
+
+### Updated
+
+- **Helpers - layouts() | Optimised the internal scripts usage for savv_scripts()
+
+
 ## [2.4.3] - 2026-04-22
 
 ### Changed
