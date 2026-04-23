@@ -6,6 +6,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [2.5.1] - 2026-04-23
+
+### Update
+
+- **Utils/Router - dispatch() | safer $path slashing for failsave route comparision espesially for nested routes not using dynamicDiscovery.
+
+
 ## [2.5.0] - 2026-04-23
 
 ### Added
