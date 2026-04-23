@@ -4,7 +4,7 @@ namespace Savv\Utils;
 /**
  * Represents the current HTTP request using PHP superglobals as the data source.
  *
- * The request object provides small convenience methods for accessing GET, POST,
+ * The request object provides small convenience methods for accessing GET, POST, SERVER, FILES
  * files, request metadata, and common request checks in a framework-friendly way.
  */
 class Request
@@ -96,6 +96,40 @@ class Request
         }
 
         return $this->postData[$key] ?? $default;
+    }
+
+
+    /**
+     * Get all SERVER data or a specific SERVER field.
+     *
+     * @param string|null $key SERVER field to retrieve. Pass null to return the full SERVER payload.
+     * @param mixed $default Value returned when the requested SERVER field is missing.
+     * @return mixed Either the complete SERVER array or a single resolved value.
+     */
+    public function server(?string $key = null, $default = null)
+    {
+        if ($key === null) {
+            return $this->serverData;
+        }
+
+        return $this->serverData[$key] ?? $default;
+    }
+
+
+    /**
+     * Get all FILES data or a specific FILES field.
+     *
+     * @param string|null $key FILES field to retrieve. Pass null to return the full FILES payload.
+     * @param mixed $default Value returned when the requested FILES field is missing.
+     * @return mixed Either the complete FILES array or a single resolved value.
+     */
+    public function file(?string $key = null, $default = null)
+    {
+        if ($key === null) {
+            return $this->files;
+        }
+
+        return $this->files[$key] ?? $default;
     }
 
     /**

@@ -5,6 +5,14 @@ All notable changes to the Savv Web Framework are documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+
+## [2.5.0] - 2026-04-23
+
+### Added
+
+- **Utils/Request - Added server() and file() methods.
+
+
 ## [2.4.4] - 2026-04-22
 
 ### Updated
