@@ -333,23 +333,24 @@ class Router
         $method = $request->method();
         $controller = new \Savv\Controllers\SystemController();
 
+        // This ensures internal matching works whether there's a leading slash or not
+        $path = ltrim($request->path(), '/'); 
+        $path = ($path === '') ? '/' : $path;
+
         // FAST-PASS: Intercept PWA System Assets
         // Bypasses regex loop and dynamic discovery for performance and reliability
         if ($method === 'GET') {
-            // Ensure we have a clean path for comparison
-            $filePath = ltrim($request->path() ?: '/', '/');
-            if ($filePath === 'sw.js' || $filePath === 'manifest.json') {
+            // Trimming /sw.js or /manifest.json can never result into "" or "/" but sw.js or manifest.json respectively
+            if ($path === 'sw.js' || $path === 'manifest.json') {
                 
-                if ($filePath === 'sw.js') return $controller->getServiceWorkerFile();
-                if ($filePath === 'manifest.json') return $controller->getManifestFile();
+                if ($path === 'sw.js') return $controller->getServiceWorkerFile();
+                if ($path === 'manifest.json') return $controller->getManifestFile();
             }
 
-            if (strpos($filePath, 'savv-assets/') === 0) {
-                return $controller->getLocalAsset($filePath);
+            if (strpos($path, 'savv-assets/') === 0) {
+                return $controller->getLocalAsset($path);
             }
         }
-
-        $path = $request->path();
 
         // 1. Attempt to match registered routes (Explicit/Cached)
         foreach ($this->routes as $routeData) {
