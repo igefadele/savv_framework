@@ -350,6 +350,10 @@ class Router
             if (strpos($path, 'savv-assets/') === 0) {
                 return $controller->getLocalAsset($path);
             }
+
+            if (strpos($path, 'assets/') === 0) {
+                return $controller->serveAsset($path);
+            }
         }
 
         // 1. Attempt to match registered routes (Explicit/Cached)

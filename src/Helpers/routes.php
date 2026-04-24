@@ -8,7 +8,7 @@ router()->get('manifest.json', [SystemController::class, 'getManifestFile']);
 router()->get('sw.js', [SystemController::class, 'getServiceWorkerFile']);
 
 // A catch-all route to serve any of the user's asset which serve does not catch
-router()->get('/assets/(.*)', [SystemController::class, 'serveAsset']);
+router()->get('/assets/{$path}', [SystemController::class, 'serveAsset']);
 
 // For Any local asset
 router()->get('savv-asset/{$path}', [SystemController::class, 'getLocalAsset']);

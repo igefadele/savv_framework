@@ -108,7 +108,7 @@ return null;
     public function serveAsset($path) {
         // 1. Construct the full system path
         // Ensure we sanitize this to prevent directory traversal attacks!
-        $fullPath = ROOT_PATH . '/assets/' . $path;
+        $fullPath = PUBLIC_PATH . '/' . $path;
         
         // Ensure the file is actually inside the assets folder
         if (!file_exists($fullPath) || is_dir($fullPath)) {
