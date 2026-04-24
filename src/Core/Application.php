@@ -5,9 +5,10 @@ use Savv\Utils\Router;
 use Savv\Utils\Request;
 
 class Application {
-    public static function bootstrap($rootPath) {
+    public static function bootstrap($rootPath, $publicPath = null) {
         if (!defined('ROOT_PATH')) define('ROOT_PATH', $rootPath);
-        
+        if (!defined('PUBLIC_PATH')) define('PUBLIC_PATH', $publicPath ?? $rootPath);
+
         // Load .env
         if (file_exists(ROOT_PATH . '/.env')) {
             \Dotenv\Dotenv::createImmutable(ROOT_PATH)->load();
