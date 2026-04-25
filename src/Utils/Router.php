@@ -429,15 +429,65 @@ class Router
                 }
             }
 
-            // Handle standard Callables
-            if (is_callable($finalCallback)) {
-                return call_user_func_array($finalCallback, $params);
+            $toInvoke = null;
+        
+            if (is_array($finalCallback)) {
+                [$controller, $action] = $finalCallback;
+                $toInvoke = [new $controller(), $action];
+            } elseif (is_callable($finalCallback)) {
+                $toInvoke = $finalCallback;
             }
 
-            // Handle Controller pairs
-            [$controller, $action] = $finalCallback;
-            $instance = new $controller();
-            return call_user_func_array([$instance, $action], $params);
+            if ($toInvoke) {
+                // Use Reflection to see what the method actually wants
+                $reflector = is_array($toInvoke) 
+                    ? new \ReflectionMethod($toInvoke[0], $toInvoke[1]) 
+                    : new \ReflectionFunction($toInvoke);
+
+                $methodParams = $reflector->getParameters();
+                $finalArgs = [];
+
+                foreach ($methodParams as $param) {
+                    $type = $param->getType();
+                    // If the parameter is type-hinted as Request, inject it
+                    if ($type && !$type->isBuiltin() && $type->getName() === 'Savv\Utils\Request') {
+                        $finalArgs[] = $request;
+                    } else {
+                        // Otherwise, pull from the route params ($id, $slug, etc.)
+                        // This matches the variable name in the function to the name in the route {id}
+                        $name = $param->getName();
+                        $finalArgs[] = $params[$name] ?? null;
+                    }
+                }
+
+
+                foreach ($methodParams as $param) {
+                    $type = $param->getType();
+                    
+                    // If the parameter is type-hinted, inject the appropriate instance
+                    if ($type && !$type->isBuiltin()) {
+                        $typeName = $type->getName();
+                        
+                        // Smart Injection based on Type-Hint
+                        if ($typeName === 'Savv\Utils\Request') {
+                            $finalArgs[] = $request;
+                            continue;
+                        }
+                        if ($typeName === 'Savv\Utils\Session') {
+                            $finalArgs[] = $session;
+                            continue;
+                        }
+                    }
+
+                    // Fallback to route parameters by name
+                    // Pull from the route params ($id, $slug, etc.)
+                    // This matches the variable name in the function to the name in the route e.g {id}, {slug}, etc.
+                    $name = $param->getName();
+                    $finalArgs[] = $params[$name] ?? null;
+                }
+
+                return call_user_func_array($toInvoke, $finalArgs);
+            }
         };
     }
     /**

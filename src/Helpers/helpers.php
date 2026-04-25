@@ -193,3 +193,27 @@ function abort($code = 404, $message = '') {
     
     exit;
 }
+
+if (!function_exists('session')) {
+    function session(): \Savv\Utils\Session {
+        return \Savv\Utils\Session::getInstance();
+    }
+}
+
+
+if (!function_exists('flash')) {
+    /**
+     * Set or Get a flash message.
+     */
+    function flash(string $key, $value = null) {
+        $session = \Savv\Utils\Session::getInstance();
+        
+        // If value is provided, we are setting a message (likely in a Controller)
+        if ($value !== null) {
+            return $session->flash($key, $value);
+        }
+
+        // Otherwise, we are retrieving it (likely in a View)
+        return $session->flash($key);
+    }
+}

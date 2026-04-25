@@ -6,6 +6,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [2.5.4] - 2026-04-25
+
+### Added
+
+- **Session - Session Util Class and associated helpers | session(), flash()
+
+
 ## [2.5.3] - 2026-04-24
 
 ### Updated
