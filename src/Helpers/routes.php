@@ -1,5 +1,5 @@
 <?php
-use Savv\Controllers\SystemController;
+use Savv\Controllers\{SystemController, BlogController};
 
 // Route for manifest.json
 router()->get('manifest.json', [SystemController::class, 'getManifestFile']);
@@ -12,3 +12,6 @@ router()->get('/assets/{$path}', [SystemController::class, 'serveAsset']);
 
 // For Any local asset
 router()->get('savv-asset/{$path}', [SystemController::class, 'getLocalAsset']);
+
+// Sync Posts
+router()->get('/sync-posts', [BlogController::class, 'syncPosts']);

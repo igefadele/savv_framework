@@ -423,8 +423,9 @@ class Router
                     case 'redirect':
                         return response()->redirect($finalCallback['url'], $finalCallback['status']);
                     case 'post':
-                        $_GET['slug'] = $finalCallback['slug'];
-                        return require page_path('/post-detail.php');
+                        $_GET['post_slug'] = $finalCallback['slug'];
+                        $_GET['metadata'] = $finalCallback['metadata'];
+                        return BlogService::servePost($finalCallback['slug']);
                     case 'view':
                         return require $finalCallback['path'];
                 }
@@ -447,19 +448,6 @@ class Router
 
                 $methodParams = $reflector->getParameters();
                 $finalArgs = [];
-
-                foreach ($methodParams as $param) {
-                    $type = $param->getType();
-                    // If the parameter is type-hinted as Request, inject it
-                    if ($type && !$type->isBuiltin() && $type->getName() === 'Savv\Utils\Request') {
-                        $finalArgs[] = $request;
-                    } else {
-                        // Otherwise, pull from the route params ($id, $slug, etc.)
-                        // This matches the variable name in the function to the name in the route {id}
-                        $name = $param->getName();
-                        $finalArgs[] = $params[$name] ?? null;
-                    }
-                }
 
 
                 foreach ($methodParams as $param) {
@@ -491,6 +479,8 @@ class Router
             }
         };
     }
+
+
     /**
     * Dynamic Discovery Fallback
     * This allows files in views/pages/ to work if no explicit route matches
@@ -499,25 +489,24 @@ class Router
     {
         $slug = ($path === '/' || $path === '') ? 'index' : ltrim($path, '/');
         $viewPath = page_path("/{$slug}.php");
-
+        
+        // 1. Check if it's a standard page (e.g., about.php)
         if (file_exists($viewPath)) {
             require $viewPath;
             return true;
         }
 
-        return false; // This triggers the handleExternalFallbacks() in Application.php
-    }
+        // 2. Check if the slug exists in our posts configuration
+        $posts = config('posts') ?? [];
+        if (isset($posts[$slug])) {
+            BlogService::servePost($slug);
+            return true;
+        }
 
-    protected function resolvePostView(string $slug) {
+        // 3. Ultimate fallback to check if there's a markdown file for this slug in the posts directory
         $postPath = post_path("/{$slug}.md");
-
         if (file_exists($postPath)) {
-            [$metadata, $content] = BlogService::splitPostData($postPath);
-
-            require page_path('/post-detail.php', [
-                'metadata' => $metadata, // TODO: Use metadata title as $pageTitle, and use $slug as the browser address
-                'content' => $content
-            ]);
+            BlogService::servePost($slug);
             return true;
         }
 

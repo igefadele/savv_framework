@@ -70,10 +70,12 @@ class RouteCache
 
     protected function compilePosts($router) {
         $posts = config('posts') ?? [];  
-        foreach ($posts as $slug => $title) { // UPDATE this as per new actual posts config structure
-            $router->get("{$slug}", [
+        foreach ($posts as $slug => $postData) { 
+            // We register the slug as a top-level route
+            $router->get($slug, [
                 '__savv_type' => 'post',
-                'slug' => $slug
+                'slug' => $slug,
+                'metadata' => $postData,
             ]);
         }
     }
