@@ -70,7 +70,7 @@ class RouteCache
 
     protected function compilePosts($router) {
         $posts = config('posts') ?? [];  
-        foreach ($posts as $slug => $title) {
+        foreach ($posts as $slug => $title) { // UPDATE this as per new actual posts config structure
             $router->get("{$slug}", [
                 '__savv_type' => 'post',
                 'slug' => $slug

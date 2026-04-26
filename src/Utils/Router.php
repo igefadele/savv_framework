@@ -3,6 +3,7 @@ namespace Savv\Utils;
 
 use Savv\Providers\AppProvider;
 use Savv\Utils\{Response};
+use Savv\Services\BlogService;
 
 /**
  * Registers routes, groups shared route attributes, resolves named URLs,
@@ -422,8 +423,8 @@ class Router
                     case 'redirect':
                         return response()->redirect($finalCallback['url'], $finalCallback['status']);
                     case 'post':
-                        $_GET['post_slug'] = $finalCallback['slug'];
-                        return require ROOT_PATH . '/views/pages/post-detail.php';
+                        $_GET['slug'] = $finalCallback['slug'];
+                        return require page_path('/post-detail.php');
                     case 'view':
                         return require $finalCallback['path'];
                 }
@@ -497,10 +498,26 @@ class Router
     protected function resolveDynamicView(string $path)
     {
         $slug = ($path === '/' || $path === '') ? 'index' : ltrim($path, '/');
-        $viewPath = ROOT_PATH . '/views/pages/' . $slug . '.php';
+        $viewPath = page_path("/{$slug}.php");
 
         if (file_exists($viewPath)) {
             require $viewPath;
+            return true;
+        }
+
+        return false; // This triggers the handleExternalFallbacks() in Application.php
+    }
+
+    protected function resolvePostView(string $slug) {
+        $postPath = post_path("/{$slug}.md");
+
+        if (file_exists($postPath)) {
+            [$metadata, $content] = BlogService::splitPostData($postPath);
+
+            require page_path('/post-detail.php', [
+                'metadata' => $metadata, // TODO: Use metadata title as $pageTitle, and use $slug as the browser address
+                'content' => $content
+            ]);
             return true;
         }
 
