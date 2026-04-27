@@ -18,11 +18,17 @@ class SavvQuery {
     protected $offset;
     protected $orderBy;
     protected $joins = [];
+    protected $modelClass; // Store the class name explicitly
 
 
     public function __construct(SavvDb $db, $table) {
         $this->db = $db;
         $this->table = $table;
+    }
+
+    public function setModel($class) {
+        $this->modelClass = $class;
+        return $this;
     }
 
     public function getWithMeta($ids) {
@@ -130,12 +136,12 @@ class SavvQuery {
         $sql = $this->buildSelect();
         $results = $this->db->query($sql, $this->params)->fetchAll();
         
-        $modelClass = $this->getModelClassFromTable($this->table);
+        // POINT 1: MODEL HYDRATION
+        // Use the explicitly set model class, or fallback to the convention
+        $class = $this->modelClass ?: $this->getModelClassFromTable($this->table);
         
-        // Map raw DB rows to SavvModel instances
-        $models = array_map(fn($attributes) => new $modelClass($attributes), $results);
+        $models = array_map(fn($attributes) => new $class($attributes), $results);
 
-        // If 'with' is set, trigger the eager load
         if (!empty($models) && !empty($this->with)) {
             $this->loadRelationships($models);
         }

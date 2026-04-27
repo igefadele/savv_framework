@@ -926,6 +926,352 @@ Each installation entry contains:
 
 When active, unmatched requests will be handed off to the external system.
 
+
+---
+
+## Database
+
+Savv Web includes a lightweight, high-performance database layer built on four tightly designed classes. It gives you a modern ORM experience — fluent querying, eager loading, dirty-state tracking, and relationships — while adding negligible overhead and keeping the entire implementation readable and traceable.
+
+The database layer lives under `Savv\Utils\Db\` and is available via global helpers (`savvQuery()`, `savvDb()`) in addition to static model methods.
+
+---
+
+### Architecture
+
+The database layer is built on four core components, each with a single well-defined responsibility.
+
+| Class | Responsibility |
+|-------|---------------|
+| `SavvDb` | Singleton PDO connection manager. All queries go through prepared statements. |
+| `SavvModel` | Abstract base class for your models. Provides CRUD, dirty-state tracking, and relationship descriptors. |
+| `SavvQuery` | Fluent query builder. Handles filtering, ordering, pagination, joins, eager loading, and model hydration. |
+| `SavvCache` | In-memory identity map. Caches meta-data during the request lifecycle to prevent redundant queries. |
+
+**The Identity Map (`SavvCache`).** To solve the N+1 query problem common in meta-data-heavy architectures, `SavvCache` stores fetched meta records in memory keyed by object ID. Subsequent accesses within the same request hit memory, not the database.
+
+**Blueprint Relationships.** Relationship methods (`hasMany`, `belongsTo`, etc.) do not execute queries immediately. They return a descriptor array — a "blueprint" — that the eager-loading engine uses to batch all related records into a single query per relationship. Database load drops from O(N) to O(1 + number of relations).
+
+**Dirty State Tracking.** `SavvModel` stores the original state of each model at load time. On `save()`, only columns that have actually changed are sent to the database. After a successful save, the original state is reset, preventing redundant identical writes on subsequent calls.
+
+**Explicit Hydration.** `SavvQuery::setModel()` tells the builder exactly which class to instantiate for each result row. No convention guessing. No magic. Full type safety.
+
+---
+
+### Configuration
+
+Add a `configs/database.php` file to your project:
+
+```php
+// configs/database.php
+
+return [
+    'driver'    => 'mysql',
+    'host'      => '127.0.0.1',
+    'database'  => 'savv_db',
+    'username'  => 'root',
+    'password'  => '',
+    'charset'   => 'utf8mb4',
+    'collation' => 'utf8mb4_unicode_ci',
+];
+```
+
+Initialize the connection once — typically in your bootstrap or a service provider — by passing the config to `SavvDb::getInstance()`:
+
+```php
+use Savv\Utils\Db\SavvDb;
+
+SavvDb::getInstance(config('database'));
+```
+
+After that first call, `SavvDb::getInstance()` (with no arguments) returns the same singleton connection throughout the rest of the request.
+
+---
+
+### Defining Models
+
+Extend `SavvModel` and declare the `$table` property:
+
+```php
+namespace App\Models;
+
+use Savv\Utils\Db\SavvModel;
+
+class Post extends SavvModel {
+    protected static $table = 'posts';
+
+    public function author() {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function comments() {
+        return $this->hasMany(Comment::class, 'post_id');
+    }
+}
+```
+
+```php
+namespace App\Models;
+
+use Savv\Utils\Db\SavvModel;
+
+class User extends SavvModel {
+    protected static $table = 'users';
+
+    public function posts() {
+        return $this->hasMany(Post::class, 'user_id');
+    }
+
+    public function profile() {
+        return $this->hasOne(Profile::class, 'user_id');
+    }
+}
+```
+
+---
+
+### CRUD Operations
+
+**Find by ID**
+
+```php
+$post = Post::find(1);
+echo $post->title;
+```
+
+**Create**
+
+```php
+$user = new User([
+    'username' => 'ige_fadele',
+    'email'    => 'ige@savadub.com',
+    'status'   => 'active',
+]);
+$user->save();
+// $user->id is now populated from lastInsertId()
+```
+
+**Update**
+
+Only the columns that changed are sent to the database:
+
+```php
+$user = User::find(1);
+$user->status = 'inactive'; // only this column will be updated
+$user->save();
+```
+
+**Delete**
+
+```php
+$user = User::find(1);
+$user->delete();
+```
+
+---
+
+### Fluent Querying
+
+Use `Model::query()` or the global `savvQuery()` helper to build expressive queries:
+
+```php
+// Via model
+$users = User::query()
+    ->select(['id', 'username', 'email'])
+    ->where('status', 'active')
+    ->orderBy('created_at', 'DESC')
+    ->get();
+
+// Via global helper
+$posts = savvQuery('posts')
+    ->where('is_published', 1)
+    ->orderBy('created_at', 'DESC')
+    ->get();
+```
+
+**Available builder methods**
+
+| Method | Description |
+|--------|-------------|
+| `select($columns)` | Specify columns to fetch. Accepts a string or array. |
+| `where($column, $value, $operator)` | Add a WHERE clause. Default operator is `=`. |
+| `whereIn($column, $values)` | Add a WHERE IN clause. |
+| `orderBy($column, $direction)` | Set ORDER BY. Default direction is `DESC`. |
+| `join($table, $first, $second, $type)` | Add a JOIN. Default type is `INNER`. |
+| `get()` | Execute and return all matched model instances. |
+| `first()` | Execute and return the first matched result only. |
+| `count()` | Return the count of matched rows as an integer. |
+| `exists()` | Return `true` if at least one matching row exists. |
+| `paginate($perPage, $page)` | Return a paginated result array. |
+
+---
+
+### Pagination
+
+`paginate()` returns a structured array ready to use in your views:
+
+```php
+$result = User::query()
+    ->where('status', 'active')
+    ->paginate(15, $_GET['page'] ?? 1);
+
+// $result contains:
+// [
+//     'data'         => [...],  // array of model instances
+//     'total'        => 120,    // total matching rows
+//     'per_page'     => 15,
+//     'current_page' => 1,
+//     'last_page'    => 8,
+// ]
+```
+
+---
+
+### Eager Loading
+
+Load relationships upfront to avoid the N+1 problem. Savv fetches all related records in **one additional query per relationship**, regardless of how many parent models are in the result.
+
+```php
+// 2 queries total: one for posts, one for their authors
+$posts = Post::query()
+    ->with(['author'])
+    ->get();
+
+foreach ($posts as $post) {
+    echo $post->author->name; // no extra query triggered
+}
+
+// Multiple relationships — still one extra query per relation
+$posts = Post::query()
+    ->with(['author', 'comments'])
+    ->get();
+```
+
+---
+
+### Relationships
+
+#### `hasOne` — One-to-One
+
+```php
+// In User model
+public function profile() {
+    return $this->hasOne(Profile::class, 'user_id');
+}
+
+// Usage
+$profile = User::find(1)->profile;
+```
+
+#### `hasMany` — One-to-Many
+
+```php
+// In Post model
+public function comments() {
+    return $this->hasMany(Comment::class, 'post_id');
+}
+
+// Usage
+$comments = Post::find(1)->comments;
+```
+
+#### `belongsTo` — Inverse / Many-to-One
+
+```php
+// In Comment model
+public function post() {
+    return $this->belongsTo(Post::class, 'post_id');
+}
+
+// Usage
+$post = Comment::find(1)->post;
+```
+
+#### `hasManyThrough` — Deep Relationships
+
+Useful for structures like Country → Users → Posts, where you need the final collection without stepping through intermediate models manually. The method uses a standard `INNER JOIN` and returns a blueprint the eager-loading engine can batch.
+
+```php
+// In Country model
+public function posts() {
+    return $this->hasManyThrough(
+        Post::class,    // target
+        User::class,    // intermediate
+        'country_id',   // foreign key on users table (links to Country)
+        'user_id'       // foreign key on posts table (links to User)
+    );
+}
+
+// Usage
+$countryPosts = Country::find(1)->posts;
+```
+
+---
+
+### Raw Queries
+
+For advanced cases — transactions, DDL statements, or anything outside the builder — use `savvDb()` directly:
+
+```php
+// Raw query with parameters
+savvDb()->query("UPDATE sessions SET expired = 1 WHERE last_seen < ?", [time() - 3600]);
+
+// Within a transaction
+$db = savvDb();
+$db->query("START TRANSACTION");
+
+try {
+    $db->query("INSERT INTO orders (user_id, total) VALUES (?, ?)", [$userId, $total]);
+    $db->query("UPDATE inventory SET stock = stock - 1 WHERE product_id = ?", [$productId]);
+    $db->query("COMMIT");
+} catch (\Exception $e) {
+    $db->query("ROLLBACK");
+    logger()->error('Transaction failed', ['reason' => $e->getMessage()]);
+}
+```
+
+---
+
+### The Identity Map — Meta Data
+
+`SavvCache` is used internally by `SavvQuery::getWithMeta()` to batch-fetch meta records (from a `{table}_meta` table) alongside primary records. This is particularly useful for WordPress-style architectures where entities have a separate meta table.
+
+```php
+// Fetches users + their meta in 2 queries total, not N+1
+$items = savvQuery('users')->getWithMeta([1, 2, 3, 4, 5]);
+
+// Access meta on a model via __get — hits the cache, not the DB
+echo $user->display_name;
+```
+
+You can also write to or read from the cache directly:
+
+```php
+use Savv\Utils\Db\SavvCache;
+
+SavvCache::setMeta($userId, 'avatar_url', '/uploads/avatar.jpg');
+$avatar = SavvCache::getMeta($userId, 'avatar_url');
+
+// Clear the cache after a long-running process to free memory
+SavvCache::flush();
+```
+
+---
+
+### Global Database Helpers
+
+| Helper | Returns | Description |
+|--------|---------|-------------|
+| `savvQuery($table)` | `SavvQuery` | Start a fluent query on any table. |
+| `savvDb()` | `SavvDb` | Access the raw PDO wrapper for queries and transactions. |
+
+---
+
+### Security
+
+All queries executed through `SavvDb::query()` — including every query generated by the builder and the model — use PDO prepared statements with bound parameters. User input passed through `where()`, `whereIn()`, `save()`, or raw `savvDb()->query()` calls is never interpolated into the SQL string. SQL injection protection is on by default with no extra configuration needed.
+
+
 ---
 
 ## Deployment

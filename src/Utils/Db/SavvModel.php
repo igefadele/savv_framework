@@ -47,21 +47,29 @@ abstract class SavvModel {
         $id = $this->attributes['id'] ?? null;
 
         if ($id) {
-            // Update
             $diff = array_diff_assoc($this->attributes, $this->original);
             if (empty($diff)) return true;
 
             $fields = implode(' = ?, ', array_keys($diff)) . ' = ?';
             $db->query("UPDATE " . static::$table . " SET $fields WHERE id = ?", [...array_values($diff), $id]);
         } else {
-            // Insert
             $columns = implode(', ', array_keys($this->attributes));
             $placeholders = implode(', ', array_fill(0, count($this->attributes), '?'));
             $db->query("INSERT INTO " . static::$table . " ($columns) VALUES ($placeholders)", array_values($this->attributes));
             $this->attributes['id'] = $db->lastInsertId();
         }
-        $this->original = $this->attributes;
+
+        $this->original = $this->attributes; 
         return true;
+    }
+
+    /**
+     * Get a new query builder instance for the model.
+     *
+     * @return \Savv\Utils\Db\SavvQuery
+     */
+    public static function query() { 
+        return savvQuery(static::$table)->setModel(static::class);
     }
 
     public function delete() {
@@ -135,14 +143,5 @@ abstract class SavvModel {
             'foreignKey'  => "{$interTable}.{$firstKey}", // The link back to the parent
             'localKey'    => $localKey
         ];
-    }
-
-    /**
-     * Get a new query builder instance for the model.
-     *
-     * @return \Savv\Utils\Db\SavvQuery
-     */
-    public static function query() {
-        return savvQuery(static::$table);
-    }
+    } 
 }
