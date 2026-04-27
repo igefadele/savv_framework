@@ -18,6 +18,7 @@ class Application {
     }
 
     public function run() {
+        // ========== START: ROUTER SETUP & DISPATCH ==========
         $cacheFile = ROOT_PATH . '/storage/framework/routes.php';
         $router = Router::getInstance();
 
@@ -35,6 +36,20 @@ class Application {
         if (!$handled) {
             $this->handleExternalFallbacks();
         }
+        // ========== END: ROUTER SETUP & DISPATCH ==========
+
+        // ========== START: DB CONNECTION SETUP ==========
+        $dbConfig = config('database');
+        if ($dbConfig) {
+            \Savv\Utils\Db\SavvDb::getInstance($dbConfig);
+        } else {
+            // If no DB config, we can still run the app but models won't work
+            // I could have thrown an exception here, but I want to allow for use cases where users 
+            // just want to use the routing and templating features without a database.
+            // throw new \Exception("Database configuration not found. Please provide a valid config/database.php file.");
+        }
+        // ========== END: DB CONNECTION SETUP ==========
+
     }
 
     /**

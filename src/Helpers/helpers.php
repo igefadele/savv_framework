@@ -217,3 +217,29 @@ if (!function_exists('flash')) {
         return $session->flash($key);
     }
 }
+
+/**
+ * Global helper to initiate a fluent SavvQuery.
+ * * @param string $table The database table name.
+ * @return \Savv\Utils\Db\SavvQuery
+ */
+if (!function_exists('savvQuery')) {
+    function savvQuery(string $table) {
+        // SavvDb::getInstance() handles the singleton connection
+        return new \Savv\Utils\Db\SavvQuery(
+            \Savv\Utils\Db\SavvDb::getInstance(), 
+            $table
+        );
+    }
+}
+
+/** 
+ * Global helper to get the SavvDb instance for raw queries or transactions.
+ * This is useful for advanced users who need direct access to the database connection.
+ * 
+ * // Usage:
+ *   savvDb()->query("DROP TABLE temporary_logs");
+*/
+function savvDb() {
+    return \Savv\Utils\Db\SavvDb::getInstance();
+}
