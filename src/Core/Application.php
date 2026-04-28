@@ -5,6 +5,8 @@ use Savv\Utils\Router;
 use Savv\Utils\Request;
 
 class Application {
+    protected $redis = null;
+
     public static function bootstrap($rootPath, $publicPath = null) {
         if (!defined('ROOT_PATH')) define('ROOT_PATH', $rootPath);
         if (!defined('PUBLIC_PATH')) define('PUBLIC_PATH', $publicPath ?? $rootPath);
@@ -18,7 +20,22 @@ class Application {
     }
 
     public function run() {
-        // ========== START: ROUTER SETUP & DISPATCH ==========
+        // 1. Persist paths so the CLI knows where the app lives
+        $this->persistEnvironmentPaths();
+
+        // 2. Ensure the CLI binary is available (as discussed)
+        $this->ensureCliBinaryExists();
+
+        // 3. Configure Database (if applicable)
+        $this->configureDatabase(); 
+
+        // Bus Init
+        $this->initBusAndObserver();
+
+        $this->loadRouter(); 
+    }
+
+    protected function loadRouter() {
         $cacheFile = ROOT_PATH . '/storage/framework/routes.php';
         $router = Router::getInstance();
 
@@ -36,9 +53,19 @@ class Application {
         if (!$handled) {
             $this->handleExternalFallbacks();
         }
-        // ========== END: ROUTER SETUP & DISPATCH ==========
+    }
 
-        // ========== START: DB CONNECTION SETUP ==========
+    protected function initBusAndObserver() {
+        (new \Savv\Providers\BusServiceProvider())->boot();
+
+        // Observers Init
+        $observers = require config('observers');
+        foreach ($observers as $model => $observer) {
+            (new $observer())->observe();
+        }
+    }
+
+    protected function configureDatabase() {
         $dbConfig = config('database');
         if ($dbConfig) {
             \Savv\Utils\Db\SavvDb::getInstance($dbConfig);
@@ -48,8 +75,6 @@ class Application {
             // just want to use the routing and templating features without a database.
             // throw new \Exception("Database configuration not found. Please provide a valid config/database.php file.");
         }
-        // ========== END: DB CONNECTION SETUP ==========
-
     }
 
     /**
@@ -90,5 +115,73 @@ class Application {
             echo "404 - Page not found!.";
         }
         exit;
+    }
+
+    /**
+     * Get a Redis instance, prioritizing the native C extension 
+     * and falling back to the Predis PHP library.
+     * If redis config is not provided, this will return null, allowing the app to function without Redis.
+     */ 
+    public function getRedis() 
+    {
+        if ($this->redis !== null) {
+            return $this->redis;
+        }
+
+        $config = config('database.redis');
+        
+        // If no config is provided, we treat Redis as "disabled"
+        if (!$config) {
+            return null; 
+        }
+
+        $host = $config['host'] ?? '127.0.0.1';
+        $port = $config['port'] ?? 6379;
+        $pass = $config['password'] ?? null;
+
+        // Try Native Extension
+        if (class_exists('\Redis')) {
+            $this->redis = new \Redis();
+            @$this->redis->pconnect($host, $port);
+            if ($pass) @$this->redis->auth($pass);
+            return $this->redis;
+        }
+
+        // Fallback to Predis
+        if (class_exists('\Predis\Client')) {
+            $options = $pass ? ['parameters' => ['password' => $pass]] : [];
+            $this->redis = new \Predis\Client([
+                'scheme' => 'tcp',
+                'host'   => $host,
+                'port'   => $port,
+            ], $options);
+            return $this->redis;
+        }
+
+        return null;
+    }
+
+
+    protected function persistEnvironmentPaths() {
+        $data = [
+            'ROOT_PATH'   => ROOT_PATH,
+            'PUBLIC_PATH' => PUBLIC_PATH,
+        ];
+        
+        // Save to a non-public framework folder
+        $pathFile = __DIR__ . '/../.paths.json';
+        file_put_contents($pathFile, json_encode($data, JSON_PRETTY_PRINT));
+    }
+
+    protected function ensureCliBinaryExists() {
+        $stubPath = PUBLIC_PATH . '/savv';
+        
+        if (!file_exists($stubPath)) {
+            $content = "#!/usr/bin/env php\n<?php\n";
+            $content .= "require '" . __DIR__ . "/../framework/bin/savv';";
+            
+            file_put_contents($stubPath, $content);
+            chmod($stubPath, 0755);
+        }
     }
 }

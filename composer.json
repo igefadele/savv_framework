@@ -12,7 +12,11 @@
     ],
     "require": {
         "php": ">=8.0",
-        "vlucas/phpdotenv": "^5.5"
+        "vlucas/phpdotenv": "^5.5",
+        "predis/predis": "^3.4"
+    },
+    "suggest": {
+        "predis/predis": "Required to use the Service Bus if the native php-redis extension is not installed."
     },
     "autoload": {
         "psr-4": {

@@ -1,0 +1,22 @@
+#!/usr/bin/env php
+<?php
+
+// 1. Locate the persisted paths
+$pathFile = __DIR__ . '/../.paths.json';
+
+if (!file_exists($pathFile)) {
+    die("Error: Savv CLI not initialized. Please visit your app in a browser once to set paths.\n");
+}
+
+$paths = json_decode(file_get_contents($pathFile), true);
+
+define('ROOT_PATH',   $paths['ROOT_PATH']);
+define('PUBLIC_PATH', $paths['PUBLIC_PATH']);
+
+// 2. Load the project's autoloader
+require ROOT_PATH . '/vendor/autoload.php';
+
+// 3. Bootstrap and Run Kernel
+$app = \Savv\Core\Application::bootstrap(ROOT_PATH, PUBLIC_PATH);
+$kernel = new \Savv\Console\Kernel();
+$kernel->handle($argv);

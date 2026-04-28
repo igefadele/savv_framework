@@ -1,7 +1,7 @@
 <?php
 namespace Savv\Console;
 
-use Savv\Console\Commands\{RouteCache, MakeConfig, MakeController};
+use Savv\Console\Commands\{RouteCache, MakeConfig, MakeController, BusWorkCommand};
 
 class Kernel
 {
@@ -12,6 +12,7 @@ class Kernel
         'make:controller' => MakeController::class,
         'make:config'     => MakeConfig::class,
         'route:cache'     => RouteCache::class,
+        'bus:work'        => BusWorkCommand::class, // Internal connector
     ];
 
     /**

@@ -45,6 +45,10 @@ abstract class SavvModel {
     public function save() {
         $db = SavvDb::getInstance();
         $id = $this->attributes['id'] ?? null;
+        $exists = !empty($this->attributes['id']);
+
+        $before = $exists ? 'updating' : 'creating';
+        if (SavvEvent::fire(static::class . "@$before", $this) === false) return false;
 
         if ($id) {
             $diff = array_diff_assoc($this->attributes, $this->original);
@@ -60,6 +64,9 @@ abstract class SavvModel {
         }
 
         $this->original = $this->attributes; 
+
+        $after = $exists ? 'updated' : 'created';
+        SavvEvent::fire(static::class . "@$after", $this);
         return true;
     }
 
@@ -73,11 +80,14 @@ abstract class SavvModel {
     }
 
     public function delete() {
-        if (isset($this->attributes['id'])) {
-            $db = SavvDb::getInstance();
-            return $db->query("DELETE FROM " . static::$table . " WHERE id = ?", [$this->attributes['id']]);
-        }
-        return false;
+        if (empty($this->attributes['id'])) return false;
+        if (SavvEvent::fire(static::class . "@deleting", $this) === false) return false;
+
+        $db = SavvDb::getInstance();
+        $db->query("DELETE FROM " . static::$table . " WHERE id = ?", [$this->attributes['id']]);
+
+        SavvEvent::fire(static::class . "@deleted", $this);
+        return true;
     }
 
     /**
@@ -144,4 +154,22 @@ abstract class SavvModel {
             'localKey'    => $localKey
         ];
     } 
+
+
+    /** Fluent Event Registration 
+     * Example: User::creating(fn($u) => $u->password = password_hash($u->password, PASSWORD_BCRYPT));
+     * This will listen to the "creating" event for the User model and execute the callback before the 
+     * record is created. The callback receives the model instance as a parameter, allowing you 
+     * to modify it before it's saved to the database.
+    */
+    public static function creating(callable $cb) { SavvEvent::listen(static::class."@creating", $cb); }
+    public static function created(callable $cb)  { SavvEvent::listen(static::class."@created", $cb); }
+    public static function updating(callable $cb) { SavvEvent::listen(static::class."@updating", $cb); }
+    public static function updated(callable $cb)  { SavvEvent::listen(static::class."@updated", $cb); }
+    public static function deleting(callable $cb) { SavvEvent::listen(static::class."@deleting", $cb); }
+    public static function deleted(callable $cb)  { SavvEvent::listen(static::class."@deleted", $cb); }
+
+    public static function on($event, callable $cb) { SavvEvent::listen(static::class."@{$event}", $cb); }
+    
+    public function trigger($event) { return SavvEvent::fire(static::class."@{$event}", $this); }
 }
