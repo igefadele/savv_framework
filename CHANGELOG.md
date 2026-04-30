@@ -5,12 +5,13 @@ All notable changes to the Savv Web Framework are documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
-
-## [2.5.4] - 2026-04-25
+## [2.5.4-alpha] - 2026-04-30
 
 ### Added
 
 - **Session - Session Util Class and associated helpers | session(), flash()
+- **Database & ORM - Custom built Database layer ORM for highly efficient data management which translates to raw optimized SQL for fast execution.
+- **Event & Transport Bus - Event, Observer, Service and Event Bus
 
 
 ## [2.5.3] - 2026-04-24
