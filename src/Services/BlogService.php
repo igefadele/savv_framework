@@ -6,7 +6,7 @@ use Savv\Packages\Parsedown;
 
 class BlogService
 {
-    public static function applyAdRules($html, $rules): string {
+    public static function applyAdRules(string $html, array $rules): string {
         $header_html = "";
         $footer_html = "";
         $content_rules = [];
@@ -66,10 +66,9 @@ class BlogService
     }
 
     /** 
-     * This go through the post .md file, separate the metadata and content, and return them as an array.
+     * Splits the markdown file data, separating the FrontMatter as the blog metadata and the rest as the blog content
     */
-    public static function splitPostData($path): array|null {
-        $rules = config('ads'); // Load ad rules for content injection
+    public static function splitPostMdData(string $path): array|null {
         $metadata = [];
         $markdownContent = "# Post not found";
 
@@ -93,8 +92,21 @@ class BlogService
             }
         }  
 
+        return [
+            'metadata' => $metadata,
+            'content' => $markdownContent
+        ];
+    } 
+
+    /** 
+     * This go through the post .md file, separate the metadata and content, and return them as an array.
+    */
+    public static function splitPostData(string $path): array|null {
+        $rules = config('ads'); // Load ad rules for content injection 
+        [$metadata, $content] = self::splitPostMdData($path);
+
         $parsedown = new Parsedown();
-        $htmlContent = $parsedown->text($markdownContent); 
+        $htmlContent = $parsedown->text($content); 
 
         // Apply ads rules and injections
         $processedContent = BlogService::applyAdRules($htmlContent, $rules);
@@ -105,7 +117,14 @@ class BlogService
         ];
     } 
 
-    public static function servePost($slug) {
+    public static function servePost(string $slug) {
+        // First check post pre-generated cache files for the post
+        $cachedPostsPath = ROOT_PATH . "/storage/framework/posts/" . $slug . "html";
+        if (file_exists($cachedPostsPath)) return $cachedPostsPath;
+
+        // If a matching cached post is not found, then find the md file, parse, add rules, 
+        // and return the post-detail.php file for the post.
+
         $allPostConfig = config('posts');
         
         if (!isset($allPostConfig[$slug])) {
@@ -133,13 +152,13 @@ class BlogService
 
 
     // Create the configs/posts.php file based on the markdown files in the posts/ directory
-    public static function syncPosts() {
+    public static function syncPosts(): string {
         $postFiles = glob(post_path('/*.md'));
         $manifest = [];
 
         foreach ($postFiles as $file) {
-            $data = self::getMetadataOnly($file);
-            $meta = $data['metadata'] ?? [];
+            $data = self::splitPostMdData($file); 
+            $meta = $data['metadata'];
             
             // Get file system times
             $fileCreated = date("Y-m-d H:i:s", filectime($file));
@@ -165,27 +184,21 @@ class BlogService
         
         $configPath = ROOT_PATH . '/configs/posts.php';
         if (file_put_contents($configPath, $content)) {
-            echo "Successfully synced " . count($manifest) . " posts to config.";
+            return "Successfully synced " . count($manifest) . " posts to config.";
         } else {
-            echo "Failed to write posts config.";
+            return "Failed to write posts config.";
         }
-        
-    }
+    } 
+
 
     /** 
-     * Lightweight helper to just get front-matter 
+     * 
     */
-    public static function getMetadataOnly($path): array {
-        $content = file_get_contents($path);
-        $parts = preg_split('/^---$/m', $content, 3);
-        if (count($parts) < 3) return [];
-        
-        $metadata = [];
-        $lines = explode("\n", trim($parts[1]));
-        foreach ($lines as $line) {
-            $kv = explode(":", $line, 2);
-            if (count($kv) == 2) $metadata[trim($kv[0])] = trim($kv[1]);
-        }
-        return $metadata;
+    public static function generatePostCache(string $slug) {
+        $cachePath = ROOT_PATH . "/storage/framework/posts";
+        if (!is_dir(dirname($cachePath))) mkdir(dirname($cachePath), 0777, true);
+
+        file_put_contents($cachePath . $slug . '.html', "<!-- SavvBlog Cache: " . date('Y-m-d H:i:s') . " -->\n" . $html);
+
     }
 }

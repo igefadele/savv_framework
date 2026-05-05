@@ -36,7 +36,7 @@ class RouteCache
         echo "Success: Manifest saved to {$cachePath}\n";
     }
 
-    protected function compileViews($router) {
+    protected function compileViews(Router $router) {
         $viewDir = ROOT_PATH . '/views/pages';
         if (!is_dir($viewDir)) return;
 
@@ -56,7 +56,7 @@ class RouteCache
         }
     }
 
-    protected function compileRedirections($router) {
+    protected function compileRedirections(Router $router) {
         $redirects = config('redirections') ?? [];  
         foreach ($redirects as $slug => $target) {
             // A marker that tells the Router this is a redirection
@@ -68,7 +68,7 @@ class RouteCache
         }
     }
 
-    protected function compilePosts($router) {
+    protected function compilePosts(Router $router) {
         $posts = config('posts') ?? [];  
         foreach ($posts as $slug => $postData) { 
             // We register the slug as a top-level route
