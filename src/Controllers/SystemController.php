@@ -141,7 +141,7 @@ return null;
     }
 
 
-    public function getLocalAsset(string $path) { 
+    public function getLocalAsset(string $path) {
         $fileName = str_replace('savv-assets/', '', $path);
         $extension = pathinfo($fileName, PATHINFO_EXTENSION);
         
@@ -157,6 +157,8 @@ return null;
             header("Expires: " . gmdate("D, d M Y H:i:s", time() + 31536000) . " GMT");
             readfile($filePath);
             exit;
-        } 
+        }
+
+        abort(404, 'Framework asset not found');
     }
 }

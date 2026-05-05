@@ -5,24 +5,25 @@ use Savv\Utils\Router;
 
 class RouteCache
 {
-    public function execute($args)
+    public function execute($args = null)
     {
         echo "Starting route compilation...\n";
 
         // 1. Initialize a fresh Router instance
         $router = Router::getInstance();
+        $router->clearRoutes();
 
         // 2. Load Routes files
         $router->loadRouteFiles();
 
         // 3. Scan views/ directory for Dynamic Routes
-        $this->compileViews($router);
+        $this->compilePagesRoutes($router);
 
         // 4. Load Redirections
-        $this->compileRedirections($router);
+        $this->compileRedirectionsRoutes($router);
 
         // 5. Load Posts Config Discovery
-        $this->compilePosts($router);
+        $this->compilePostsRoutes($router);
 
         // 6. Save to Storage
         $cachePath = ROOT_PATH . '/storage/framework/routes.php';
@@ -36,7 +37,7 @@ class RouteCache
         echo "Success: Manifest saved to {$cachePath}\n";
     }
 
-    protected function compileViews(Router $router) {
+    protected function compilePagesRoutes(Router $router) {
         $viewDir = ROOT_PATH . '/views/pages';
         if (!is_dir($viewDir)) return;
 
@@ -51,12 +52,13 @@ class RouteCache
             // Use the same view marker format expected by Router::createRouteDestination()
             $router->get($uri, [
                 '__savv_type' => 'view',
-                'path' => $file->getPathname()
+                'path' => $file->getPathname(),
+                'uri' => $uri
             ]);
         }
     }
 
-    protected function compileRedirections(Router $router) {
+    protected function compileRedirectionsRoutes(Router $router) {
         $redirects = config('redirections') ?? [];  
         foreach ($redirects as $slug => $target) {
             // A marker that tells the Router this is a redirection
@@ -68,7 +70,7 @@ class RouteCache
         }
     }
 
-    protected function compilePosts(Router $router) {
+    protected function compilePostsRoutes(Router $router) {
         $posts = config('posts') ?? [];  
         foreach ($posts as $slug => $postData) { 
             // We register the slug as a top-level route

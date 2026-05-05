@@ -4,6 +4,7 @@ namespace Savv\Utils;
 use Savv\Providers\AppProvider;
 use Savv\Utils\{Response};
 use Savv\Services\BlogService;
+use Savv\Services\PageService;
 
 /**
  * Registers routes, groups shared route attributes, resolves named URLs,
@@ -101,7 +102,7 @@ class Router
         // We use __DIR__ to go from src/Utils/ to src/Helpers/
         $internalRoutes = dirname(__DIR__) . '/Helpers/routes.php';
         if (file_exists($internalRoutes)) {
-            require_once $internalRoutes;
+            require $internalRoutes;
         }
         
         // 2. Load User/Project Routes
@@ -109,23 +110,45 @@ class Router
         if (is_dir($routeDir)) {
             $files = glob($routeDir . '/*.php');
             foreach ($files as $file) {
-                require_once $file;
+                require $file;
             }
         }
     }
 
+    /**
+    * Register redirections defined in the configuration file as redirect-type routes.
+    *
+    * This method reads the `redirections` configuration, which is an associative array
+    * where keys are source slugs and values are either target URLs or arrays with 'url' and 'status'.
+    * It then registers a GET route for each redirection that responds with an HTTP redirect.
+    *
+    * Example `redirections` config:
+    * ```
+    * return [
+    *     '/old-page' => '/new-page',
+    *     '/external' => 'https://example.com',
+    *     '/temp-redirect' => [
+    *         'url' => '/temporary',
+    *         'status' => 302
+    *     ]
+    * ];
+    * ```
+    *
+    * @return void
+    */
     public function registerRedirections() 
     {
         $redirects = config('redirections') ?? [];
         $router = Router::getInstance();
 
         foreach ($redirects as $slug => $target) {
-            $router->get($slug, function() use ($target) {
-                $url = is_array($target) ? $target['url'] : $target;
-                $status = is_array($target) ? ($target['status'] ?? 302) : 302;
-
-                return response()->redirect($url, $status);
-            });
+            $url = is_array($target) ? $target['url'] : $target;
+            $status = is_array($target) ? ($target['status'] ?? 302) : 302;
+            $router->get($slug, [
+                '__savv_type' => 'redirect',
+                'url' => $url,
+                'status' => $status
+            ]);
         }
     }
 
@@ -135,6 +158,15 @@ class Router
     public function loadRawRoutes(array $routes): void
     {
         $this->routes = $routes;
+    }
+
+    /**
+     * Clear registered routes before rebuilding a fresh route manifest.
+     */
+    public function clearRoutes(): void
+    {
+        $this->routes = [];
+        $this->groupStack = [];
     }
 
     /**
@@ -413,7 +445,7 @@ class Router
     /**
      * The Core "Destination": To handle Cacheable Markers
      */
-    protected function createRouteDestination($finalCallback, array $params)
+    protected function createRouteDestination(array $finalCallback, array $params)
     {
         return function ($request) use ($finalCallback, $params) {
             // Handle Cacheable Array Markers
@@ -427,7 +459,7 @@ class Router
                         $_GET['metadata'] = $finalCallback['metadata'];
                         return BlogService::servePost($finalCallback['slug']);
                     case 'view':
-                        return require $finalCallback['path'];
+                        return PageService::servePage($finalCallback['uri']);
                 }
             }
 
@@ -488,11 +520,9 @@ class Router
     protected function resolveDynamicView(string $path)
     {
         $slug = ($path === '/' || $path === '') ? 'index' : ltrim($path, '/');
-        $viewPath = page_path("/{$slug}.php");
         
-        // 1. Check if it's a standard page (e.g., about.php)
-        if (file_exists($viewPath)) {
-            require $viewPath;
+        // 1. Check if it's a standard page (e.g., about.php) - use cached version if available
+        if (PageService::servePage($slug)) {
             return true;
         }
 
