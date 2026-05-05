@@ -66,7 +66,9 @@ class BlogService
     }
 
     /** 
-     * Splits the markdown file data, separating the FrontMatter as the blog metadata and the rest as the blog content
+     * This go through the post .md file, splits the markdown file data, 
+     * separating the FrontMatter as the blog metadata and the rest as the blog content
+     * and return them as an array.
     */
     public static function splitPostMdData(string $path): array|null {
         $metadata = [];
@@ -99,11 +101,15 @@ class BlogService
     } 
 
     /** 
-     * This go through the post .md file, separate the metadata and content, and return them as an array.
+     * Takes the md file, separate the metadata and content, 
+     * convert the content to html after applying the ads and snippet rules
+     * and return them as an array.
     */
     public static function splitPostData(string $path): array|null {
-        $rules = config('ads'); // Load ad rules for content injection 
-        [$metadata, $content] = self::splitPostMdData($path);
+        $rules = config('ads') ?? []; // Load ad rules for content injection 
+        $data = self::splitPostMdData($path);
+        $metadata = $data['metadata'];
+        $content = $data['content'];
 
         $parsedown = new Parsedown();
         $htmlContent = $parsedown->text($content); 
@@ -117,21 +123,18 @@ class BlogService
         ];
     } 
 
-    public static function servePost(string $slug) {
-        // First check post pre-generated cache files for the post
-        $cachedPostsPath = ROOT_PATH . "/storage/framework/posts/" . $slug . "html";
-        if (file_exists($cachedPostsPath)) return $cachedPostsPath;
-
-        // If a matching cached post is not found, then find the md file, parse, add rules, 
-        // and return the post-detail.php file for the post.
-
+    /** 
+     * Returns an array that contains the post metadata and the html content
+    */
+    public static function getPostData(string $slug): array {
         $allPostConfig = config('posts');
+        $postData = [];
         
         if (!isset($allPostConfig[$slug])) {
             // Fallback: check if file exists directly even if not in config
             $fallbackPath = post_path("/{$slug}.md");
             if (!file_exists($fallbackPath)) {
-                abort(404, 'Post not found');
+                return $postData;
             }
             $postData = self::splitPostData($fallbackPath);
         } else {
@@ -142,6 +145,23 @@ class BlogService
             $postData['metadata'] = array_merge($postData['metadata'], $postConfig);
         }
 
+        return $postData;
+    }
+
+    /** 
+     * Returns the post file content either as a cached html file or the post-detail.php file 
+     * which uses the passed metadata and html content as variables.
+    */
+    public static function servePost(string $slug) {
+        // First check post pre-generated cache files for the post
+        $cachedPostsPath = ROOT_PATH . "/storage/framework/posts/" . $slug . "html";
+        if (file_exists($cachedPostsPath)) return $cachedPostsPath;
+
+        // If a matching cached post is not found, then find the md file, parse, add rules, 
+        // and return the post-detail.php file for the post.
+        $postData = self::getPostData($slug);
+        if (empty($postData)) abort(404, 'Post not found');
+
         // Render the view
         // The require call inside a method allows us to pass variables into the scope of post-detail.php
         $metadata = $postData['metadata'];
@@ -151,7 +171,11 @@ class BlogService
     } 
 
 
-    // Create the configs/posts.php file based on the markdown files in the posts/ directory
+    
+
+    /** 
+     * Create the configs/posts.php file based on the markdown files in the posts/ directory
+    */
     public static function syncPosts(): string {
         $postFiles = glob(post_path('/*.md'));
         $manifest = [];
@@ -192,13 +216,20 @@ class BlogService
 
 
     /** 
-     * 
+     * Generate the post cache html files inside /storage/framework/posts
     */
-    public static function generatePostCache(string $slug) {
+    public static function cachePost(string $slug): string {
         $cachePath = ROOT_PATH . "/storage/framework/posts";
         if (!is_dir(dirname($cachePath))) mkdir(dirname($cachePath), 0777, true);
 
-        file_put_contents($cachePath . $slug . '.html', "<!-- SavvBlog Cache: " . date('Y-m-d H:i:s') . " -->\n" . $html);
+        $postData = self::getPostData($slug);
+        $metadata = $postData['metadata'];
+        $content = $postData['content'];
 
+        $page = page_path('post-detail.php');
+        $html = file_get_contents($page);
+
+        file_put_contents($cachePath .'/' . $slug . '.html', "<!-- SavvBlog Cache: " . date('Y-m-d H:i:s') . " -->\n" . $html);
+        return "Cache created successfully!";
     }
 }

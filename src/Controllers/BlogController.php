@@ -12,5 +12,10 @@ class BlogController {
         exit;
     }
 
-    
+    public function cachePost(string $slug): string {
+        echo BlogService::cachePost($slug);
+        exit;
+    }
+
+
 }

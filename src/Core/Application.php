@@ -59,14 +59,16 @@ class Application {
         (new \Savv\Providers\BusServiceProvider())->boot();
 
         // Observers Init
-        $observers = require config('observers');
-        foreach ($observers as $model => $observer) {
-            (new $observer())->observe();
+        $observers = config('observers') ?? [];
+        if (!empty($observers)) {
+            foreach ($observers as $model => $observer) {
+                (new $observer())->observe();
+            }
         }
     }
 
     protected function configureDatabase() {
-        $dbConfig = config('database');
+        $dbConfig = config('database') ?? [];
         if ($dbConfig) {
             \Savv\Utils\Db\SavvDb::getInstance($dbConfig);
         } else {

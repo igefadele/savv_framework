@@ -15,3 +15,6 @@ router()->get('savv-asset/{$path}', [SystemController::class, 'getLocalAsset']);
 
 // Sync Posts
 router()->get('/sync-posts', [BlogController::class, 'syncPosts']);
+
+// generate a post cache html file
+router()->get('/cache-post/{slug}', [BlogController::class, 'cachePost']);
