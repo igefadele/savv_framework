@@ -7,7 +7,7 @@ use Savv\Utils\Request;
 class Application {
     protected $redis = null;
 
-    public static function bootstrap($rootPath, $publicPath = null) {
+    public static function bootstrap(string $rootPath, string $publicPath = null) {
         if (!defined('ROOT_PATH')) define('ROOT_PATH', $rootPath);
         if (!defined('PUBLIC_PATH')) define('PUBLIC_PATH', $publicPath ?? $rootPath);
 
@@ -23,7 +23,7 @@ class Application {
         // 1. Persist paths so the CLI knows where the app lives
         $this->persistEnvironmentPaths();
 
-        // 2. Ensure the CLI binary is available (as discussed)
+        // 2. Ensure the CLI binary is available
         $this->ensureCliBinaryExists();
 
         // 3. Configure Database (if applicable)
@@ -171,12 +171,12 @@ class Application {
         ];
         
         // Save to a non-public framework folder
-        $pathFile = __DIR__ . '/../.paths.json';
+        $pathFile = __DIR__ . '/../framework/.paths.json';
         file_put_contents($pathFile, json_encode($data, JSON_PRETTY_PRINT));
     }
 
     protected function ensureCliBinaryExists() {
-        $stubPath = PUBLIC_PATH . '/savv';
+        $stubPath = ROOT_PATH . '/savv';
         
         if (!file_exists($stubPath)) {
             $content = "#!/usr/bin/env php\n<?php\n";

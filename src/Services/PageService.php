@@ -96,9 +96,9 @@ class PageService
             $cachedHtml = file_get_contents($cachedPagesPath);
             if (strpos($cachedHtml, '<?php') === false) {
                 // Set cache headers similar to assets
-                header("Content-Type: text/html");
-                header("Cache-Control: public, max-age=31536000, immutable");
-                header("Expires: " . gmdate("D, d M Y H:i:s", time() + 31536000) . " GMT");
+                // header("Content-Type: text/html");
+                // header("Cache-Control: public, max-age=31536000, immutable");
+                // header("Expires: " . gmdate("D, d M Y H:i:s", time() + 31536000) . " GMT");
                 echo $cachedHtml;
                 return true;
             }
@@ -110,6 +110,7 @@ class PageService
             return false;
         }
 
-        return require $pagePath;
+        require $pagePath;
+        return true;
     } 
 }

@@ -4,7 +4,7 @@ namespace Savv\Services;
 
 use Savv\Packages\Parsedown;
 
-class BlogService
+class PostService
 {
     public static function applyAdRules(string $html, ?array $rules = null): string {
         if (empty($rules)) {
@@ -132,7 +132,7 @@ class BlogService
         $htmlContent = $parsedown->text($content); 
 
         // Apply ads rules and injections
-        $processedContent = BlogService::applyAdRules($htmlContent, $rules);
+        $processedContent = self::applyAdRules($htmlContent, $rules);
 
         return [
             'metadata' => $metadata,
@@ -176,9 +176,9 @@ class BlogService
             $cachedHtml = file_get_contents($cachedPostsPath);
             if (strpos($cachedHtml, '<?php') === false) {
                 // Set cache headers similar to assets
-                header("Content-Type: text/html");
-                header("Cache-Control: public, max-age=31536000, immutable");
-                header("Expires: " . gmdate("D, d M Y H:i:s", time() + 31536000) . " GMT");
+                // header("Content-Type: text/html");
+                // header("Cache-Control: public, max-age=31536000, immutable");
+                // header("Expires: " . gmdate("D, d M Y H:i:s", time() + 31536000) . " GMT");
                 echo $cachedHtml;
                 return true;
             }

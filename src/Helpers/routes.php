@@ -1,5 +1,5 @@
 <?php
-use Savv\Controllers\{SystemController, BlogController, PageController};
+use Savv\Controllers\{SystemController};
 
 // Route for manifest.json
 router()->get('manifest.json', [SystemController::class, 'getManifestFile']);
@@ -13,23 +13,4 @@ router()->get('/assets/{$path}', [SystemController::class, 'serveAsset']);
 // For any internal framework asset
 router()->get('/savv-assets/{path}', [SystemController::class, 'getLocalAsset']);
 
-// Sync all posts
-router()->get('/sync-post/{slug}', [BlogController::class, 'syncPost']);
 
-// Sync all posts
-router()->get('/sync-posts', [BlogController::class, 'syncAllPosts']);
-
-// generate a post cache html file
-router()->get('/cache-post/{slug}', [BlogController::class, 'cachePost']);
-
-// generate cache for all posts
-router()->get('/cache-posts', [BlogController::class, 'cacheAllPosts']);
-
-// Cache routes for faster performance
-router()->get('/cache-routes', [PageController::class, 'cacheRoutes']);
-
-// Cache a page using its uri
-router()->get('/cache-page/{uri}', [PageController::class, 'cachePage']);
-
-// Cache pages
-router()->get('/cache-pages', [PageController::class, 'cacheAllPages']);

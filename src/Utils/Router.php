@@ -3,7 +3,7 @@ namespace Savv\Utils;
 
 use Savv\Providers\AppProvider;
 use Savv\Utils\{Response};
-use Savv\Services\BlogService;
+use Savv\Services\PostService;
 use Savv\Services\PageService;
 
 /**
@@ -457,7 +457,7 @@ class Router
                     case 'post':
                         $_GET['post_slug'] = $finalCallback['slug'];
                         $_GET['metadata'] = $finalCallback['metadata'];
-                        return BlogService::servePost($finalCallback['slug']);
+                        return PostService::servePost($finalCallback['slug']);
                     case 'view':
                         return PageService::servePage($finalCallback['uri']);
                 }
@@ -529,14 +529,14 @@ class Router
         // 2. Check if the slug exists in our posts configuration
         $posts = config('posts') ?? [];
         if (isset($posts[$slug])) {
-            BlogService::servePost($slug);
+            PostService::servePost($slug);
             return true;
         }
 
         // 3. Ultimate fallback to check if there's a markdown file for this slug in the posts directory
         $postPath = post_path("/{$slug}.md");
         if (file_exists($postPath)) {
-            BlogService::servePost($slug);
+            PostService::servePost($slug);
             return true;
         }
 

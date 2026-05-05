@@ -2,6 +2,7 @@
 namespace Savv\Console;
 
 use Savv\Console\Commands\{RouteCache, MakeConfig, MakeController, BusWorkCommand};
+use Savv\Console\Commands\{CachePost, CacheAllPosts, CachePage, CacheAllPages, SyncPost, SyncAllPosts, OptimizeCommand};
 
 class Kernel
 {
@@ -10,9 +11,16 @@ class Kernel
      */
     protected array $commands = [
         'make:controller' => MakeController::class,
-        'make:config'     => MakeConfig::class,
-        'route:cache'     => RouteCache::class,
+        'make:config'     => MakeConfig::class, 
         'bus:work'        => BusWorkCommand::class, // Internal connector
+        'cache:route'     => RouteCache::class,
+        'cache:post'      => CachePost::class,
+        'cache:posts'     => CacheAllPosts::class,
+        'cache:page'      => CachePage::class,
+        'cache:pages'     => CacheAllPages::class,
+        'sync:post'       => SyncPost::class,
+        'sync:posts'      => SyncAllPosts::class, 
+        'optimize'        => OptimizeCommand::class, 
     ];
 
     /**
