@@ -9,6 +9,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Updated
 
+- **CLI Commands**: Add more commands especially for caching and syncing
 - **Caching**: For pages, posts, routes
 - **Blogging Feature**: Pagination, filtering
 

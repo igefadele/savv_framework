@@ -7,22 +7,22 @@ use Savv\Utils\Db\SavvCache;
  * This is what the user's models (e.g., class Post extends SavvModel) will use.
  */
 abstract class SavvModel {
-    protected static $table;
-    protected $attributes = [];
-    protected $original = []; // Track changes
-    protected $relations = [];
+    protected static string $table;
+    protected array $attributes = [];
+    protected array $original = []; // Track changes
+    protected array $relations = [];
 
-    public function __construct($attributes = []) {
+    public function __construct(array $attributes = []) {
         $this->attributes = $attributes;
         $this->original = $attributes;
     }
 
-    public function setRelation($name, $value) {
+    public function setRelation(string $name, mixed $value): void {
         $this->relations[$name] = $value;
     }
 
     // Updated Magic Getter to check relations first
-    public function __get($key) {
+    public function __get(string $key): mixed {
         if (array_key_exists($key, $this->relations)) {
             return $this->relations[$key];
         }
@@ -32,17 +32,17 @@ abstract class SavvModel {
         return SavvCache::getMeta($this->attributes['id'] ?? null, $key);
     }
 
-    public function __set($key, $value) {
+    public function __set(string $key, mixed $value): void {
         $this->attributes[$key] = $value;
     }
 
-    public static function find($id) {
+    public static function find(string|int $id): ?self {
         $db = SavvDb::getInstance();
         $data = $db->query("SELECT * FROM " . static::$table . " WHERE id = ? LIMIT 1", [$id])->fetch();
         return $data ? new static($data) : null;
     }
 
-    public function save() {
+    public function save(): bool {
         $db = SavvDb::getInstance();
         $id = $this->attributes['id'] ?? null;
         $exists = !empty($this->attributes['id']);
@@ -75,11 +75,11 @@ abstract class SavvModel {
      *
      * @return \Savv\Utils\Db\SavvQuery
      */
-    public static function query() { 
+    public static function query(): SavvQuery { 
         return savvQuery(static::$table)->setModel(static::class);
     }
 
-    public function delete() {
+    public function delete(): bool {
         if (empty($this->attributes['id'])) return false;
         if (SavvEvent::fire(static::class . "@deleting", $this) === false) return false;
 
@@ -93,7 +93,7 @@ abstract class SavvModel {
     /**
      * One-to-One: A User has one Profile
      */
-    protected function hasOne($relatedClass, $foreignKey, $localKey = 'id') {
+    protected function hasOne(string $relatedClass, string $foreignKey, string $localKey = 'id'): array {
         $instance = new $relatedClass();
         return [
             'type'       => 'hasOne',
@@ -108,7 +108,7 @@ abstract class SavvModel {
      * One-to-Many: A Post has many Comments
      * It return a descriptor if called in a query context
      */ 
-    protected function hasMany($relatedClass, $foreignKey, $localKey = 'id') {
+    protected function hasMany(string $relatedClass, string $foreignKey, string $localKey = 'id'): array {
         $instance = new $relatedClass();
         return [
             'type'       => 'hasMany',
@@ -121,7 +121,7 @@ abstract class SavvModel {
     /**
      * Inverse: A Comment belongs to a Post
      */
-    protected function belongsTo($relatedClass, $foreignKey, $ownerKey = 'id') {
+    protected function belongsTo(string $relatedClass, string $foreignKey, string $ownerKey = 'id'): array {
         $instance = new $relatedClass();
         return [
             'type'       => 'belongsTo',
@@ -135,7 +135,7 @@ abstract class SavvModel {
      * Has Many Through: Country -> Users -> Posts
      * Made to return a Blueprint for the Eager Loading engine.
      */
-    protected function hasManyThrough($targetClass, $intermediateClass, $firstKey, $secondKey, $localKey = 'id') {
+    protected function hasManyThrough(string $targetClass, string $intermediateClass, string $firstKey, string $secondKey, string $localKey = 'id'): array {
         $targetInstance = new $targetClass();
         $interInstance = new $intermediateClass();
         
@@ -166,14 +166,14 @@ abstract class SavvModel {
      * record is created. The callback receives the model instance as a parameter, allowing you 
      * to modify it before it's saved to the database.
     */
-    public static function creating(callable $cb) { SavvEvent::listen(static::class."@creating", $cb); }
-    public static function created(callable $cb)  { SavvEvent::listen(static::class."@created", $cb); }
-    public static function updating(callable $cb) { SavvEvent::listen(static::class."@updating", $cb); }
-    public static function updated(callable $cb)  { SavvEvent::listen(static::class."@updated", $cb); }
-    public static function deleting(callable $cb) { SavvEvent::listen(static::class."@deleting", $cb); }
-    public static function deleted(callable $cb)  { SavvEvent::listen(static::class."@deleted", $cb); }
+    public static function creating(callable $cb): void { SavvEvent::listen(static::class."@creating", $cb); }
+    public static function created(callable $cb): void  { SavvEvent::listen(static::class."@created", $cb); }
+    public static function updating(callable $cb): void { SavvEvent::listen(static::class."@updating", $cb); }
+    public static function updated(callable $cb): void  { SavvEvent::listen(static::class."@updated", $cb); }
+    public static function deleting(callable $cb): void { SavvEvent::listen(static::class."@deleting", $cb); }
+    public static function deleted(callable $cb): void  { SavvEvent::listen(static::class."@deleted", $cb); }
 
-    public static function on($event, callable $cb) { SavvEvent::listen(static::class."@{$event}", $cb); }
+    public static function on(string $event, callable $cb): void { SavvEvent::listen(static::class."@{$event}", $cb); }
     
-    public function trigger($event) { return SavvEvent::fire(static::class."@{$event}", $this); }
+    public function trigger(string $event): mixed { return SavvEvent::fire(static::class."@{$event}", $this); }
 }

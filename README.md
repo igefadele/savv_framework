@@ -782,6 +782,14 @@ php savv <command> [arguments]
 | `route:cache` | Compiles all routes into `storage/framework/routes.php` for production |
 | `make:config <name>` | Scaffolds a blank config file in `configs/` |
 | `make:controller <Name>` | Scaffolds a controller class in `app/Controllers/` |
+| `bus:work` | Runs the bus worker to process cross-service events |
+| `cache:routes` | Caches routes for faster dispatch |
+| `cache:pages` | Caches all pages |
+| `cache:posts` | Caches all posts |
+| `cache:all` | Caches routes, pages, and posts |
+| `sync:posts` | Syncs posts from views/posts/ to configs/posts.php |
+| `sync:all` | Syncs posts and other assets |
+| `optimize` | Runs full optimization: cache routes, pages, posts, and sync assets |
 
 ### `route:cache` in detail
 
@@ -984,7 +992,7 @@ use Savv\Utils\Db\SavvDb;
 SavvDb::getInstance(config('database'));
 ```
 
-After that first call, `SavvDb::getInstance()` (with no arguments) returns the same singleton connection throughout the rest of the request.
+After that first call, `SavvDb::getInstance()` (with no arguments) returns the same singleton connection throughout the rest of the request. If `SavvDb::getInstance()` is called before initialization with config, it throws a `RuntimeException`.
 
 ---
 
@@ -1094,7 +1102,7 @@ $posts = savvQuery('posts')
 | Method | Description |
 |--------|-------------|
 | `select($columns)` | Specify columns to fetch. Accepts a string or array. |
-| `where($column, $value, $operator)` | Add a WHERE clause. Default operator is `=`. |
+| `where($column, $operator = '=', $value)` | Add a WHERE clause. Default operator is `=`. |
 | `whereIn($column, $values)` | Add a WHERE IN clause. |
 | `orderBy($column, $direction)` | Set ORDER BY. Default direction is `DESC`. |
 | `join($table, $first, $second, $type)` | Add a JOIN. Default type is `INNER`. |
@@ -1108,7 +1116,9 @@ $posts = savvQuery('posts')
 
 ### Pagination
 
-`paginate()` returns a structured array ready to use in your views:
+`paginate()` returns a structured array ready to use in your views.
+
+The builder preserves query state safely: `count()` and `exists()` use a cloned query state, and terminal operations reset the builder after execution.
 
 ```php
 $result = User::query()
@@ -1130,6 +1140,8 @@ $result = User::query()
 ### Eager Loading
 
 Load relationships upfront to avoid the N+1 problem. Savv fetches all related records in **one additional query per relationship**, regardless of how many parent models are in the result.
+
+The eager-loading engine supports `belongsTo`, `hasMany`, and `hasManyThrough` relationship blueprints with correct batch resolution.
 
 ```php
 // 2 queries total: one for posts, one for their authors
@@ -1437,6 +1449,218 @@ stdout_logfile=/path/to/project/logs/bus-worker.log
 
 If your deployment environment does not provide Redis, you can skip the worker entirely and continue using Savv in its normal single-application mode.
 
+---
+
+## Session Management
+
+Savv Web includes a lightweight session utility for managing user sessions securely.
+
+### Configuration
+
+Sessions are configured via `configs/app.php` or environment variables. The session handler uses PHP's built-in session management with optional Redis backing.
+
+### Usage
+
+```php
+use Savv\Utils\Session;
+
+// Start or resume a session
+Session::start();
+
+// Set session data
+Session::set('user_id', 123);
+Session::set('cart', ['item1', 'item2']);
+
+// Get session data
+$userId = Session::get('user_id');
+$cart = Session::get('cart', []); // with default
+
+// Check if key exists
+if (Session::has('user_id')) {
+    // User is logged in
+}
+
+// Remove specific data
+Session::remove('cart');
+
+// Destroy the entire session
+Session::destroy();
+
+// Flash messages (available for one request)
+Session::flash('success', 'Profile updated!');
+$message = Session::getFlash('success');
+```
+
+### Global Helper
+
+```php
+// Set data
+session()->set('key', 'value');
+
+// Get data
+$value = session()->get('key');
+
+// Flash data
+session()->flash('error', 'Something went wrong');
+```
+
+Sessions are automatically started on first access and use secure defaults. For production, configure `session.cookie_secure` and `session.cookie_httponly` appropriately.
+
+---
+
+## Caching and Syncing
+
+Savv Web provides comprehensive caching and syncing features to optimize performance for content-heavy sites.
+
+### Route Caching
+
+Compile all routes into a serialized manifest for production-speed dispatch:
+
+```bash
+php savv route:cache
+```
+
+This creates `storage/framework/routes.php`, eliminating filesystem scans on every request.
+
+### Page Caching
+
+Cache rendered pages to static HTML files:
+
+```bash
+php savv cache:pages
+```
+
+Pages are cached in `storage/framework/pages/` and served directly by the router for instant load times.
+
+### Post Caching
+
+Cache blog posts from Markdown files:
+
+```bash
+php savv cache:posts
+```
+
+Posts are rendered to HTML and cached for fast blog serving.
+
+### Syncing Assets
+
+Sync posts and other assets from source files to config files:
+
+```bash
+php savv sync:posts  # Sync views/posts/ to configs/posts.php
+php savv sync:all    # Full sync
+```
+
+### Full Optimization
+
+Run all caching and syncing operations:
+
+```bash
+php savv optimize
+```
+
+This is equivalent to running `route:cache`, `cache:pages`, `cache:posts`, and `sync:all` in sequence.
+
+### Cache Invalidation
+
+Delete cached files to force regeneration:
+
+- Routes: Delete `storage/framework/routes.php`
+- Pages: Delete files in `storage/framework/pages/`
+- Posts: Delete files in `storage/framework/posts/`
+
+Or use the CLI commands with `--clear` flags where available.
+
+---
+
+## Blogging Features
+
+Savv Web includes built-in blogging with Markdown support, pagination, and caching.
+
+### Post Format
+
+Posts are written in Markdown with frontmatter:
+
+```
+---
+title: My Blog Post
+slug: my-blog-post
+date: 2026-05-06
+author: John Doe
+status: published
+category: tech
+---
+
+# Post Content
+
+Write in Markdown...
+```
+
+### Blog Controllers and Views
+
+Use `BlogController` for listing and pagination:
+
+```php
+// routes/web.php
+router()->get('/blog', [BlogController::class, 'index']);
+router()->get('/blog/{page}/{limit}', [BlogController::class, 'list']);
+```
+
+Views are provided in `views/pages/blog.php` and `views/pages/post-detail.php`.
+
+### Post Management
+
+Posts are stored in `views/posts/` as `.md` files. Use the syncing commands to update the post index.
+
+### Pagination
+
+The blog supports pagination with configurable limits:
+
+```php
+$posts = PostService::paginate($page, $limit);
+```
+
+---
+
+## Configuration Reference
+
+### `configs/database.php`
+
+```php
+return [
+    'driver'    => 'mysql',
+    'host'      => '127.0.0.1',
+    'database'  => 'savv_db',
+    'username'  => 'root',
+    'password'  => '',
+    'charset'   => 'utf8mb4',
+    'collation' => 'utf8mb4_unicode_ci',
+    'redis'     => [  // Optional for bus service
+        'host' => '127.0.0.1',
+        'port' => 6379,
+        'password' => null,
+    ],
+];
+```
+
+### `configs/observers.php`
+
+```php
+return [
+    \App\Models\User::class => \App\Observers\UserObserver::class,
+];
+```
+
+### Additional Configs
+
+- `configs/app.php`: General app settings
+- `configs/mail.php`: SMTP configuration
+- `configs/pwa.php`: PWA manifest settings
+- `configs/redirections.php`: URL redirects
+- `configs/posts.php`: Blog post index (generated)
+- `configs/installations.php`: External CMS integrations
+- `configs/middlewares.php`: Middleware aliases
+- `configs/observers.php`: Model observers
 
 ---
 

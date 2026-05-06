@@ -8,10 +8,10 @@ use PDO;
  * Wraps PDO to ensure we use prepared statements and handle errors.
  */
 class SavvDb {
-    protected static $instance = null;
-    protected $pdo;
+    protected static ?self $instance = null;
+    protected PDO $pdo;
 
-    public function __construct($config) {
+    public function __construct(array $config) {
         try {
             if ($config['is_active'] ?? false) {
                 if (!isset($config['driver'], $config['host'], $config['database'], $config['username'], $config['password'], $config['charset'])) {
@@ -36,7 +36,7 @@ class SavvDb {
     }
 
     // Singleton access: SavvDb::getInstance($config)
-    public static function getInstance($config = null) {
+    public static function getInstance(?array $config = null): self {
         if (self::$instance === null) {
             if (!$config) {
                 throw new \RuntimeException("Database not initialized. Call getInstance(config) first.");
@@ -46,13 +46,13 @@ class SavvDb {
         return self::$instance;
     }
 
-    public function query($sql, $params = []) {
+    public function query(string $sql, array $params = []): \PDOStatement {
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
         return $stmt;
     }
 
-    public function lastInsertId() {
+    public function lastInsertId(): string {
         return $this->pdo->lastInsertId();
     }
 }

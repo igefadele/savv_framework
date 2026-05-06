@@ -8,30 +8,30 @@ use Savv\Utils\Db\SavvCache;
  * Handles eager loading logic.
  */
 class SavvQuery {
-    protected $db;
-    protected $table;
-    protected $with = [];
-    protected $wheres = [];
-    protected $params = []; 
-    protected $columns = '*'; 
-    protected $limit;
-    protected $offset;
-    protected $orderBy;
-    protected $joins = [];
-    protected $modelClass; // Store the class name explicitly
+    protected SavvDb $db;
+    protected string $table;
+    protected array $with = [];
+    protected array $wheres = [];
+    protected array $params = []; 
+    protected string $columns = '*'; 
+    protected ?int $limit = null;
+    protected ?int $offset = null;
+    protected ?string $orderBy = null;
+    protected array $joins = [];
+    protected ?string $modelClass = null; // Store the class name explicitly
 
 
-    public function __construct(SavvDb $db, $table) {
+    public function __construct(SavvDb $db, string $table) {
         $this->db = $db;
         $this->table = $table;
     }
 
-    public function setModel($class) {
+    public function setModel(string $class): self {
         $this->modelClass = $class;
         return $this;
     }
 
-    public function getWithMeta($ids) {
+    public function getWithMeta(array $ids): array {
         if (empty($ids)) return [];
         
         $items = $this->db->query(
@@ -51,30 +51,30 @@ class SavvQuery {
         return $items;
     }
 
-    public function select($columns = '*') {
+    public function select(array|string $columns = '*'): self {
         $this->columns = is_array($columns) ? implode(', ', $columns) : $columns;
         return $this;
     }
 
-    public function where(string $column, $operator = '=', $value = 1) {
+    public function where(string $column, string $operator = '=', mixed $value = 1): self {
         $this->wheres[] = "$column $operator ?";
         $this->params[] = $value;
         return $this;
     }
 
-    public function orderBy($column, $direction = 'DESC') {
+    public function orderBy(string $column, string $direction = 'DESC'): self {
         $this->orderBy = "ORDER BY $column $direction";
         return $this;
     }
 
-    public function first() {
+    public function first(): ?array {
         $sql = $this->buildSelect() . " LIMIT 1";
         $data = $this->db->query($sql, $this->params)->fetch();
         $this->reset();
         return $data ? $data : null;
     }
 
-    public function count() {
+    public function count(): int {
         $sql = "SELECT COUNT(*) as total FROM {$this->table}";
         if ($this->wheres) $sql .= " WHERE " . implode(' AND ', $this->wheres);
         $result = $this->db->query($sql, $this->params)->fetch();
@@ -86,12 +86,12 @@ class SavvQuery {
         return (clone $this)->count() > 0;
     }
 
-    public function join($table, $first, $second, $type = 'INNER') {
+    public function join(string $table, string $first, string $second, string $type = 'INNER'): self {
         $this->joins[] = "$type JOIN $table ON $first = $second";
         return $this;
     }
 
-    public function paginate($perPage = 15, $page = 1) {
+    public function paginate(int $perPage = 15, int $page = 1): array {
         $total = (clone $this)->count();
         $offset = ($page - 1) * $perPage;
         
@@ -109,7 +109,7 @@ class SavvQuery {
     }
 
     // Update your buildSelect() to include the joins
-    protected function buildSelect() {
+    protected function buildSelect(): string {
         $sql = "SELECT {$this->columns} FROM {$this->table}";
         
         if ($this->joins) {
@@ -127,7 +127,7 @@ class SavvQuery {
         return $sql;
     }
 
-    protected function reset() {
+    protected function reset(): self {
         $this->with = [];
         $this->wheres = [];
         $this->params = [];
@@ -142,12 +142,12 @@ class SavvQuery {
     /**
      * Define which relationships to eager load
      */
-    public function with($relations) {
+    public function with(array|string $relations): self {
         $this->with = is_array($relations) ? $relations : func_get_args();
         return $this;
     }
 
-    public function get() {
+    public function get(): array {
         $sql = $this->buildSelect();
         $results = $this->db->query($sql, $this->params)->fetchAll();
         
@@ -169,7 +169,7 @@ class SavvQuery {
      * The Eager Loading Engine
      * Refined to handle collection mapping and relationship types.
      */
-    protected function loadRelationships(&$models) {
+    protected function loadRelationships(array &$models): void {
         if (empty($models)) return;
 
         foreach ($this->with as $relation) {
@@ -218,7 +218,7 @@ class SavvQuery {
     }
 
     // Helper for WhereIn
-    public function whereIn($column, $values) {
+    public function whereIn(string $column, array $values): self {
         if (empty($values)) {
             $this->wheres[] = '0 = 1';
             return $this;
@@ -230,7 +230,7 @@ class SavvQuery {
         return $this;
     }
 
-    protected function getModelClassFromTable($table) {
+    protected function getModelClassFromTable(string $table): string {
         // Simple convention: 'posts' -> 'App\Models\Post'
         return "App\\Models\\" . ucfirst(rtrim($table, 's'));
     }
