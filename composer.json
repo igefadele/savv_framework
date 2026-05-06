@@ -22,9 +22,6 @@
         "psr-4": {
             "Savv\\": "src/"
         },
-        "classmap": [
-            "src/Console/Commands"
-        ],
         "files": [
             "src/Helpers/helpers.php",
             "src/Helpers/routes.php",

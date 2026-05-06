@@ -2,7 +2,7 @@
 
 namespace Savv\Console\Commands;
 
-use Savv\Services\{ PageService };
+use Savv\Services\{ CachePageService };
 
 
 class CachePage
@@ -14,7 +14,7 @@ class CachePage
         }
 
         $uri = $args[0];
-        echo PageService::cachePage($uri);
+        echo CachePageService::cachePage($uri);
         exit;
     }
 }

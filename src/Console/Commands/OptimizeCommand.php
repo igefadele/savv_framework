@@ -1,7 +1,7 @@
 <?php
 
 namespace Savv\Console\Commands;
-use Savv\Services\{ PostService, PageService };
+use Savv\Services\{ CachePostService, CachePageService };
 
 class OptimizeCommand
 {
@@ -10,11 +10,11 @@ class OptimizeCommand
         echo "Caching all routes...\n";
         (new RouteCache)->execute();
         echo "Caching all pages...\n";
-        echo PageService::cacheAllPages() . "\n";
+        echo CachePageService::cacheAllPages() . "\n";
         echo "Syncing all posts...\n";
-        echo PostService::syncAllPosts() . "\n";
+        echo CachePostService::syncAllPosts() . "\n";
         echo "Caching all posts...\n";
-        echo PostService::cacheAllPosts() . "\n";
+        echo CachePostService::cacheAllPosts() . "\n";
         echo "Optimization complete!\n";
         exit;
     }

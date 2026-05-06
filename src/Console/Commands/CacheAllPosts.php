@@ -2,14 +2,14 @@
 
 namespace Savv\Console\Commands;
 
-use Savv\Services\{ PostService };
+use Savv\Services\{ CachePostService };
 
 
 
 class CacheAllPosts
 {
     public function execute($args = null) {
-        echo PostService::cacheAllPosts();
+        echo CachePostService::cacheAllPosts();
         exit;
     }
 }

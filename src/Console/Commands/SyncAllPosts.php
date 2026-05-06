@@ -2,12 +2,12 @@
 
 namespace Savv\Console\Commands;
 
-use Savv\Services\{ PostService };
+use Savv\Services\{ CachePostService };
 
 class SyncAllPosts
 {
     public function execute($args = null) {
-        echo PostService::syncAllPosts();
+        echo CachePostService::syncAllPosts();
         exit;
     }
 }

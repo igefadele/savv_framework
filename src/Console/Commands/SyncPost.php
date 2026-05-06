@@ -2,7 +2,7 @@
 
 namespace Savv\Console\Commands;
 
-use Savv\Services\{ PostService, PageService };
+use Savv\Services\{ CachePostService };
 
 
 class SyncPost
@@ -14,7 +14,7 @@ class SyncPost
         }
 
         $slug = $args[0];
-        echo PostService::syncPost($slug);
+        echo CachePostService::syncPost($slug);
         exit;
     }
 }

@@ -154,10 +154,10 @@ if (!function_exists('logger')) {
 /**
  * Resolves an asset's web path and appends a versioning timestamp.
  * Automatically looks within the public directory and assumes the /assets prefix.
- * * @param string $path The path relative to the assets folder (e.g., '/css/main.css')
+ * @param string $path The path relative to the assets folder (e.g., '/css/main.css')
  * @return string The versioned web path
  */
-function asset($path) {
+function asset(string $path) {
     // 1. Normalize the input path (ensure leading slash, remove redundancy)
     $cleanPath = '/' . ltrim($path, '/');
     

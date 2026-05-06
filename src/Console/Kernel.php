@@ -14,6 +14,7 @@ class Kernel
         'make:config'     => MakeConfig::class, 
         'bus:work'        => BusWorkCommand::class, // Internal connector
         'cache:route'     => RouteCache::class,
+        'cache:routes'    => RouteCache::class,
         'cache:post'      => CachePost::class,
         'cache:posts'     => CacheAllPosts::class,
         'cache:page'      => CachePage::class,

@@ -2,7 +2,7 @@
 
 namespace Savv\Console\Commands;
 
-use Savv\Services\{ PostService };
+use Savv\Services\{ CachePostService };
 
 class CachePost
 {
@@ -13,7 +13,7 @@ class CachePost
         }
 
         $slug = $args[0];
-        echo PostService::cachePost($slug);
+        echo CachePostService::cachePost($slug);
         exit;
     }
 }
