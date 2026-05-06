@@ -18,8 +18,7 @@ class SavvDb {
                     throw new \InvalidArgumentException("Database configuration is incomplete.");
                 }
 
-                $dsn = "{$config['driver']}:host={$config['host']};dbname={$config['database']};charset={$config['charset']}";
-                
+                $dsn = "{$config['driver']}:host={$config['host']};port={$config['port']};dbname={$config['database']};charset={$config['charset']}";                
                 $this->pdo = new PDO($dsn, $config['username'], $config['password'], [
                     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -38,7 +37,10 @@ class SavvDb {
 
     // Singleton access: SavvDb::getInstance($config)
     public static function getInstance($config = null) {
-        if (self::$instance === null && $config) {
+        if (self::$instance === null) {
+            if (!$config) {
+                throw new \RuntimeException("Database not initialized. Call getInstance(config) first.");
+            }
             self::$instance = new self($config);
         }
         return self::$instance;

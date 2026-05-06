@@ -56,7 +56,7 @@ class SavvQuery {
         return $this;
     }
 
-    public function where($column, $value, $operator = '=') {
+    public function where(string $column, $operator = '=', $value = 1) {
         $this->wheres[] = "$column $operator ?";
         $this->params[] = $value;
         return $this;
@@ -70,6 +70,7 @@ class SavvQuery {
     public function first() {
         $sql = $this->buildSelect() . " LIMIT 1";
         $data = $this->db->query($sql, $this->params)->fetch();
+        $this->reset();
         return $data ? $data : null;
     }
 
@@ -77,11 +78,12 @@ class SavvQuery {
         $sql = "SELECT COUNT(*) as total FROM {$this->table}";
         if ($this->wheres) $sql .= " WHERE " . implode(' AND ', $this->wheres);
         $result = $this->db->query($sql, $this->params)->fetch();
+        $this->reset();
         return (int)$result['total'];
     }
 
     public function exists() {
-        return $this->count() > 0;
+        return (clone $this)->count() > 0;
     }
 
     public function join($table, $first, $second, $type = 'INNER') {
@@ -90,11 +92,12 @@ class SavvQuery {
     }
 
     public function paginate($perPage = 15, $page = 1) {
-        $total = $this->count();
+        $total = (clone $this)->count();
         $offset = ($page - 1) * $perPage;
         
         $sql = $this->buildSelect() . " LIMIT $perPage OFFSET $offset";
         $items = $this->db->query($sql, $this->params)->fetchAll();
+        $this->reset();
 
         return [
             'data' => $items,
@@ -124,6 +127,18 @@ class SavvQuery {
         return $sql;
     }
 
+    protected function reset() {
+        $this->with = [];
+        $this->wheres = [];
+        $this->params = [];
+        $this->columns = '*';
+        $this->limit = null;
+        $this->offset = null;
+        $this->orderBy = null;
+        $this->joins = [];
+        return $this;
+    }
+
     /**
      * Define which relationships to eager load
      */
@@ -146,6 +161,7 @@ class SavvQuery {
             $this->loadRelationships($models);
         }
 
+        $this->reset();
         return $models;
     }
 
@@ -155,8 +171,6 @@ class SavvQuery {
      */
     protected function loadRelationships(&$models) {
         if (empty($models)) return;
-
-        $ids = array_map(fn($m) => $m->id, $models);
 
         foreach ($this->with as $relation) {
             // 1. Get relationship metadata from the first model instance
@@ -168,26 +182,35 @@ class SavvQuery {
             
             $query = $relConfig['query'];
             $foreignKey = $relConfig['foreignKey'];
+            $localKey = $relConfig['localKey'] ?? 'id';
             $type = $relConfig['type'];
+
+            $ids = array_map(fn($m) => $m->{$localKey}, $models);
+            if (empty($ids)) {
+                foreach ($models as $model) {
+                    $model->setRelation($relation, $type === 'hasMany' || $type === 'hasManyThrough' ? [] : null);
+                }
+                continue;
+            }
 
             // 2. Fetch all related records in ONE query
             $relatedModels = $query->whereIn($foreignKey, $ids)->get();
 
-            // 3. Group related models by their foreign key for fast lookup
+            // 3. Group related models by their lookup key for fast assignment
             $grouped = [];
             foreach ($relatedModels as $relModel) {
-                $grouped[$relModel->$foreignKey][] = $relModel;
+                $key = $relModel->{$foreignKey} ?? null;
+                $grouped[$key][] = $relModel;
             }
 
             // 4. Associate back to parents
             foreach ($models as $model) {
-                $parentId = $model->id;
-                $matches = $grouped[$parentId] ?? [];
+                $lookupValue = $model->{$localKey};
+                $matches = $grouped[$lookupValue] ?? [];
 
-                if ($type === 'hasMany') {
+                if ($type === 'hasMany' || $type === 'hasManyThrough') {
                     $model->setRelation($relation, $matches);
                 } else {
-                    // hasOne or belongsTo
                     $model->setRelation($relation, $matches[0] ?? null);
                 }
             }
@@ -196,6 +219,11 @@ class SavvQuery {
 
     // Helper for WhereIn
     public function whereIn($column, $values) {
+        if (empty($values)) {
+            $this->wheres[] = '0 = 1';
+            return $this;
+        }
+
         $placeholders = implode(',', array_fill(0, count($values), '?'));
         $this->wheres[] = "$column IN ($placeholders)";
         $this->params = array_merge($this->params, $values);

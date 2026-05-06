@@ -147,13 +147,17 @@ abstract class SavvModel {
             ->select("{$targetTable}.*")
             ->join($interTable, "{$targetTable}.{$secondKey}", "{$interTable}.id");
 
+        $query = savvQuery($targetTable)
+            ->select("{$targetTable}.*, {$interTable}.{$firstKey} as __through_key")
+            ->join($interTable, "{$targetTable}.{$secondKey}", "{$interTable}.id");
+
         return [
             'type'        => 'hasManyThrough',
             'query'       => $query,
-            'foreignKey'  => "{$interTable}.{$firstKey}", // The link back to the parent
+            'foreignKey'  => '__through_key', // The link back to the parent through the intermediate table
             'localKey'    => $localKey
         ];
-    } 
+    }
 
 
     /** Fluent Event Registration 

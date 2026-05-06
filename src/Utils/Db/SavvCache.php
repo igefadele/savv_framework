@@ -13,6 +13,10 @@ class SavvCache {
     }
 
     public static function getMeta($id, $key) {
+        if (!$id || !isset(self::$meta[$id])) {
+            return null;
+        }
+
         return self::$meta[$id][$key] ?? null;
     }
 
