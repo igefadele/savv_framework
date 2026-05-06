@@ -176,4 +176,12 @@ abstract class SavvModel {
     public static function on(string $event, callable $cb): void { SavvEvent::listen(static::class."@{$event}", $cb); }
     
     public function trigger(string $event): mixed { return SavvEvent::fire(static::class."@{$event}", $this); }
+
+    public function toArray(): array {
+        return $this->attributes;
+    }
+
+    public function jsonSerialize(): array {
+        return $this->toArray();
+    }
 }

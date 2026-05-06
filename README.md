@@ -1006,7 +1006,7 @@ namespace App\Models;
 use Savv\Utils\Db\SavvModel;
 
 class Post extends SavvModel {
-    protected static $table = 'posts';
+    protected static string $table = 'posts';
 
     public function author() {
         return $this->belongsTo(User::class, 'user_id');
@@ -1024,7 +1024,7 @@ namespace App\Models;
 use Savv\Utils\Db\SavvModel;
 
 class User extends SavvModel {
-    protected static $table = 'users';
+    protected static string $table = 'users';
 
     public function posts() {
         return $this->hasMany(Post::class, 'user_id');

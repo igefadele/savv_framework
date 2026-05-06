@@ -56,7 +56,13 @@ class SavvQuery {
         return $this;
     }
 
-    public function where(string $column, string $operator = '=', mixed $value = 1): self {
+    public function where(string $column, mixed $operator = '=', mixed $value = null): self {
+        // If only 2 args passed: where('id', 5) -> treat as where('id', '=', 5)
+        if ($value === null && !is_string($operator)) {
+            $value = $operator;
+            $operator = '=';
+        }
+        
         $this->wheres[] = "$column $operator ?";
         $this->params[] = $value;
         return $this;
