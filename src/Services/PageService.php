@@ -23,7 +23,6 @@ class PageService
                 // header("Cache-Control: public, max-age=31536000, immutable");
                 // header("Expires: " . gmdate("D, d M Y H:i:s", time() + 31536000) . " GMT");
                 echo $cachedHtml;
-                 logger("Page Found in cache");
                 return true;
             }
         }
@@ -35,7 +34,6 @@ class PageService
             return false;
         }
 
-        logger("Page Found in views");
         require $pagePath;
         return true;
     } 

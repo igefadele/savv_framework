@@ -7,18 +7,27 @@ use Savv\Utils\Db\SavvEvent;
 
 class BusServiceProvider {
     public function boot() {
-        $redisConfig = Config::get('database.redis');
-        if (!$redisConfig) return;
+        try {
 
-        $redis = new \Redis();
-        $redis->connect($redisConfig['host'], $redisConfig['port'] ?? 6379);
-        if (!empty($redisConfig['password'])) $redis->auth($redisConfig['password']);
+            $redisConfig = Config::get('database.redis');
+            if (!$redisConfig) return;
 
-        SavvBus::setDriver($redis);
+            if (!($redisConfig['is_active'] ?? false)) return;
 
-        // Auto-broadcast events prefixed with 'broadcast:'
-        SavvEvent::listen('broadcast.*', function($payload, $event) {
-            SavvBus::dispatch($event, $payload);
-        });
+            $redis = new \Redis();
+            $redis->connect($redisConfig['host'], $redisConfig['port'] ?? 6379);
+            if (!empty($redisConfig['password'])) $redis->auth($redisConfig['password']);
+
+            SavvBus::setDriver($redis);
+
+            // Auto-broadcast events prefixed with 'broadcast:'
+            SavvEvent::listen('broadcast.*', function($payload, $event) {
+                SavvBus::dispatch($event, $payload);
+            });
+        } 
+        catch (\Exception $e) {
+            logger()->error("BusServiceProvider Boot Failed: " . $e->getMessage());
+            abort(500, "An error occurred while initializing the event bus. Please try again later.");
+        }
     }
 }
