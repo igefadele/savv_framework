@@ -81,6 +81,16 @@ function post_path($path = '') {
 }
 
 /**
+ * Build an absolute path to a file within the root `/storage` directory.
+ *
+ * @param string $path Optional relative path inside the storage directory.
+ * @return string Absolute filesystem path to the requested view storage location.
+ */
+function storage_path($path = '') {
+    return ROOT_PATH . '/storage' . ($path ? DIRECTORY_SEPARATOR . $path : $path);
+}
+
+/**
  * Validate an input array and immediately terminate with a JSON error payload on failure.
  *
  * The returned array is reduced to only the keys defined in the rules array, which
@@ -242,4 +252,38 @@ if (!function_exists('savvQuery')) {
 */
 function savvDb() {
     return \Savv\Utils\Db\SavvDb::getInstance();
+}
+
+/**
+ * Generates a list of recommended posts excluding the current one.
+ *
+ * @param string $currentSlug The slug of the post currently being viewed.
+ * @param int $limit How many recommendations to return.
+ * @return array Contains 'posts' (the full config) and 'recommendedKeys'.
+ */
+if (!function_exists('')) {
+    function getRecommendedPosts(string $currentSlug, int $limit = 3): array {
+        $allPosts = config('posts'); // Access the full posts configuration
+        
+        // Remove the current post from the available pool
+        if (isset($allPosts[$currentSlug])) {
+            unset($allPosts[$currentSlug]);
+        }
+
+        $countAvailable = count($allPosts);
+        $numToPick = min($countAvailable, $limit);
+        
+        $recommendedKeys = [];
+        if ($numToPick > 0) {
+            $picked = array_rand($allPosts, $numToPick);
+            // Normalize: array_rand returns a single key if picking 1, or an array if > 1
+            $recommendedKeys = is_array($picked) ? $picked : [$picked];
+        }
+
+        return [
+            'posts' => $allPosts,
+            'recommendedKeys' => $recommendedKeys,
+            'currentSlug' => $currentSlug
+        ];
+    }
 }

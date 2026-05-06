@@ -10,10 +10,12 @@ class PageService
     */
     public static function servePage(string $uri) {
         // First check post pre-generated cache files for the post
+        $dynamicPages = config('app.dynamic_pages') ?? [];
         $uri = trim($uri, '/');
         $page = ($uri === '') ? 'index' : $uri;
-        $cachedPagesPath = ROOT_PATH . "/storage/framework/pages/" . $page . ".html";
-        if (file_exists($cachedPagesPath)) {
+        $cachedPagesPath = storage_path("framework/pages/" . $page . ".html");
+        
+        if (!in_array($page, $dynamicPages) && file_exists($cachedPagesPath)) {
             $cachedHtml = file_get_contents($cachedPagesPath);
             if (strpos($cachedHtml, '<?php') === false) {
                 // Set cache headers similar to assets
@@ -21,16 +23,19 @@ class PageService
                 // header("Cache-Control: public, max-age=31536000, immutable");
                 // header("Expires: " . gmdate("D, d M Y H:i:s", time() + 31536000) . " GMT");
                 echo $cachedHtml;
+                 logger("Page Found in cache");
                 return true;
             }
         }
 
-        // If a matching cached page is not found, look for the page php file in the views/pages directory and serve it with the page metadata if exists
+        // If a matching cached page is not found, look for the page php file in 
+        // the views/pages directory and serve it with the page metadata if exists
         $pagePath = page_path($page . '.php');
         if (!file_exists($pagePath)) {
             return false;
         }
 
+        logger("Page Found in views");
         require $pagePath;
         return true;
     } 

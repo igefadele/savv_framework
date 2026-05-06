@@ -131,7 +131,7 @@ class Response
     {
         extract($data);
         ob_start();
-        require ROOT_PATH . "/views/{$viewPath}.php";
+        require view_path("{$viewPath}.php"); //ROOT_PATH . "/views/{$viewPath}.php";
         $this->content = ob_get_clean();
         
         return $this;

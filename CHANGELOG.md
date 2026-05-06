@@ -5,77 +5,85 @@ All notable changes to the Savv Web Framework are documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [2.5.4] - 2026-05-06
+
+### Updated
+
+- **Caching**: For pages, posts, routes
+- **Blogging Feature**: Pagination, filtering
+
+
 ## [2.5.4-alpha] - 2026-04-30
 
 ### Added
 
-- **Session - Session Util Class and associated helpers | session(), flash()
-- **Database & ORM - Custom built Database layer ORM for highly efficient data management which translates to raw optimized SQL for fast execution.
-- **Event & Transport Bus - Event, Observer, Service and Event Bus
+- **Session** - Session Util Class and associated helpers | session(), flash()
+- **Database & ORM** - Custom built Database layer ORM for highly efficient data management which translates to raw optimized SQL for fast execution.
+- **Event & Transport Bus** - Event, Observer, Service and Event Bus
 
 
 ## [2.5.3] - 2026-04-24
 
 ### Updated
 
-- **Application - PUBLIC_PATH defined also in bootstrap. It's now accepted as a parameter in public/index.php
-- Use like: Application::bootstrap(ROOT_PATH, PUBLIC_PATH);
+- **Application** - PUBLIC_PATH defined also in bootstrap. It's now accepted as a parameter in public/index.php
+- **Use like:** Application::bootstrap(ROOT_PATH, PUBLIC_PATH);
 
 
 ## [2.5.2] - 2026-04-24
 
 ### Update
 
-- ** serveAsset fallback failure | SystemController@serveAsset(), Router@dispatch(), Helpers/routers.php.
+- **serveAsset fallback failure**: SystemController@serveAsset(), Router@dispatch(), Helpers/routers.php.
 
 
 ## [2.5.1] - 2026-04-23
 
 ### Fixed
 
-- **Utils/Router - dispatch() | safer $path slashing for failsave route comparision espesially for nested routes not using dynamicDiscovery.
+- **Utils/Router** - dispatch() | safer $path slashing for failsave route comparision espesially for nested routes not using dynamicDiscovery.
 
 
 ## [2.5.0] - 2026-04-23
 
 ### Added
 
-- **Utils/Request - Added server() and file() methods.
+- **Utils/Request** - Added server() and file() methods.
 
 
 ## [2.4.4] - 2026-04-22
 
 ### Updated
 
-- **Helpers - layouts() | Optimised the internal scripts usage for savv_scripts()
+- **Helpers** - layouts() | Optimised the internal scripts usage for savv_scripts()
 
 
 ## [2.4.3] - 2026-04-22
 
 ### Changed
 
-- **Systemcontroller - getLocalAsset() | Optimised the cache expiration date
-- **Systemcontroller - getServiceWorkerFile() | Updated the cache content addition to a safer logic if any precache value is missing from the user app.
+- **Systemcontroller** - getLocalAsset() | Optimised the cache expiration date
+- **Systemcontroller** - getServiceWorkerFile() | Updated the cache content addition to a safer logic if any precache value is missing from the user app.
 
 
 ## [2.4.2] - 2026-04-21
 
 ### FIXED
 
-- **Helpers - asset() helper | To use PUBLIC_PATH global constant directly
+- **Helpers** - asset() helper | To use PUBLIC_PATH global constant directly
 
 ## [2.4.1] - 2026-04-20
 
 ### Added
 
-- **Helpers - abort() helper function.
+- **Helpers** - abort() helper function.
 
 
 ## [2.4.0] — 2026-04-20
 
 ### Added
 
-- **Asset Loading: Further optimised the asset loading helpers and router for more faster asset loading time.
+- **Asset Loading**: Further optimised the asset loading helpers and router for more faster asset loading time.
 
 
 ## [2.1.0] — 2026-04-17

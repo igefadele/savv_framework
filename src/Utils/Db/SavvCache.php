@@ -20,7 +20,7 @@ class SavvCache {
         return isset(self::$meta[$id]);
     }
 
-    // Clear cache after a long process or to free memory
+    /** Clear cache after a long process or to free memory */
     public static function flush() {
         self::$meta = [];
     }

@@ -8,6 +8,27 @@ use Savv\Console\Commands\RouteCache;
 class CacheController {
     
     /**
+     * Sync and cache all routes, pages, and posts. 
+     * For routes: Caches all routes and create the cached array record inside /storage/framework/routes.php 
+     * For pages: Caches all pages and creates corresponding html files for each page and store them in /storage/framework/pages
+     * For posts: Syncs and caches all posts and create corresponding html files for each page and store them in /storage/framework/posts
+     * and also creates the synced posts array inside /configs/posts.php
+     */
+    public function optimize() {
+        echo "Optimizing Savv Application...\n";
+        echo "Caching all routes...\n";
+        (new RouteCache)->execute();
+        echo "Caching all pages...\n";
+        echo CachePageService::cacheAllPages() . "\n";
+        echo "Syncing all posts...\n";
+        echo CachePostService::syncAllPosts() . "\n";
+        echo "Caching all posts...\n";
+        echo CachePostService::cacheAllPosts() . "\n";
+        echo "Optimization complete!\n";
+        exit; 
+    }
+
+    /**
      * Cache all routes and create the cached array record inside /storage/framework/routes.php 
      */
     public function cacheRoutes() {

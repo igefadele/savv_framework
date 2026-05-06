@@ -49,12 +49,18 @@ class CachePageService
     */
     public static function cacheAllPages(): string {
         $allPages = self::compilePages();
+        $dynamicPages = config('app.dynamic_pages') ?? [];
+
         if (empty($allPages)) {
             return "No pages found to cache.";
         }
 
         $results = [];
         foreach ($allPages as $uri => $path) {
+            if (in_array($uri, $dynamicPages)) {
+                $results[] = "Skipping dynamic page '{$path}'";
+                continue;
+            }
             $result = self::cachePage($uri);
             $results[] = "Caching '{$path}': " . $result . "\n";
         }

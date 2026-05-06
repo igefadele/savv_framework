@@ -15,7 +15,7 @@ class AppProvider
      *
      * @var array<string, class-string>
      */
-    protected static array $savoMiddlewareAliases = [];
+    protected static array $savvMiddlewareAliases = [];
 
     /**
      * Return every middleware alias available to the router.
@@ -27,6 +27,6 @@ class AppProvider
      */
     public static function middlewareAliases(): array
     {
-        return array_merge(self::$savoMiddlewareAliases, config('middlewares'));
+        return array_merge(self::$savvMiddlewareAliases, config('middlewares'));
     }
 }
