@@ -55,4 +55,8 @@ class SavvDb {
     public function lastInsertId(): string {
         return $this->pdo->lastInsertId();
     }
+
+    public function pdo(): PDO {
+        return $this->pdo;
+    }
 }

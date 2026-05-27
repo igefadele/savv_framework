@@ -38,6 +38,13 @@ class Request
     protected array $files;
 
     /**
+     * Framework/runtime attributes attached during routing or middleware.
+     *
+     * @var array<string, mixed>
+     */
+    protected array $attributes = [];
+
+    /**
      * Create a request snapshot from the current PHP superglobals.
      *
      * @return void
@@ -130,6 +137,48 @@ class Request
         }
 
         return $this->files[$key] ?? $default;
+    }
+
+    /**
+     * Return a request attribute attached by middleware or routing.
+     *
+     * @param string|null $key Attribute key. Pass null to return all attributes.
+     * @param mixed $default Fallback value returned when the key is missing.
+     * @return mixed
+     */
+    public function attribute(?string $key = null, $default = null)
+    {
+        if ($key === null) {
+            return $this->attributes;
+        }
+
+        return $this->attributes[$key] ?? $default;
+    }
+
+    /**
+     * PSR-style alias for reading a request attribute.
+     *
+     * @param string $key Attribute key.
+     * @param mixed $default Fallback value returned when the key is missing.
+     * @return mixed
+     */
+    public function getAttribute(string $key, $default = null)
+    {
+        return $this->attribute($key, $default);
+    }
+
+    /**
+     * Attach an attribute and return the updated request instance.
+     *
+     * @param string $key Attribute key.
+     * @param mixed $value Attribute value.
+     * @return self
+     */
+    public function withAttribute(string $key, $value): self
+    {
+        $this->attributes[$key] = $value;
+
+        return $this;
     }
 
     /**

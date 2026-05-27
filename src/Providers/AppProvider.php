@@ -1,6 +1,8 @@
 <?php 
 namespace Savv\Providers;
 
+use Savv\Utils\Auth\Middlewares\AuthenticateMiddleware;
+
 /**
  * Provides framework-level configuration that is shared across the core runtime.
  *
@@ -15,7 +17,9 @@ class AppProvider
      *
      * @var array<string, class-string>
      */
-    protected static array $savvMiddlewareAliases = [];
+    protected static array $savvMiddlewareAliases = [
+        'auth' => AuthenticateMiddleware::class,
+    ];
 
     /**
      * Return every middleware alias available to the router.
@@ -27,6 +31,6 @@ class AppProvider
      */
     public static function middlewareAliases(): array
     {
-        return array_merge(self::$savvMiddlewareAliases, config('middlewares'));
+        return array_merge(self::$savvMiddlewareAliases, config('middlewares', []));
     }
 }
