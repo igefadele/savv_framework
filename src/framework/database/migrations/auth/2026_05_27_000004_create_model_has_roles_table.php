@@ -1,23 +1,24 @@
 <?php
 
+use Savv\Utils\Db\Migration\Blueprint;
+use Savv\Utils\Db\Migration\Schema;
+
 return new class {
     public function up(\PDO $db): void
     {
-        $db->exec("
-            CREATE TABLE IF NOT EXISTS `model_has_roles` (
-                `role_id` BIGINT UNSIGNED NOT NULL,
-                `model_type` VARCHAR(255) NOT NULL,
-                `model_id` BIGINT UNSIGNED NOT NULL,
-                PRIMARY KEY (`role_id`, `model_id`, `model_type`),
-                INDEX `model_has_roles_model_id_model_type_index` (`model_id`, `model_type`),
-                CONSTRAINT `model_has_roles_role_id_foreign`
-                    FOREIGN KEY (`role_id`) REFERENCES `roles`(`id`) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-        ");
+        Schema::create($db, 'model_has_roles', function (Blueprint $table): void {
+            $table->unsignedBigInteger('role_id');
+            $table->string('model_type');
+            $table->unsignedBigInteger('model_id');
+            $table->primary(['role_id', 'model_id', 'model_type']);
+            $table->index(['model_id', 'model_type'], 'model_has_roles_model_id_model_type_index');
+            $table->foreign('role_id', 'model_has_roles_role_id_foreign')
+                ->references('id')->on('roles')->cascadeOnDelete();
+        });
     }
 
     public function down(\PDO $db): void
     {
-        $db->exec("DROP TABLE IF EXISTS `model_has_roles`;");
+        Schema::dropIfExists($db, 'model_has_roles');
     }
 };

@@ -120,9 +120,9 @@ class DbCommand {
         $fullPath = $dir . '/' . $fileName;
 
         if ($table) {
-            $stub = "<?php\n\nreturn new class {\n    public function up(PDO \$db): void {\n        \$sql = \"CREATE TABLE {$table} (\n            id INT AUTO_INCREMENT PRIMARY KEY,\n            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;\";\n        \n        \$db->exec(\$sql);\n    }\n\n    public function down(PDO \$db): void {\n        \$db->exec(\"DROP TABLE IF EXISTS {$table};\");\n    }\n};\n";
+            $stub = "<?php\n\nuse Savv\\Utils\\Db\\Migration\\Blueprint;\nuse Savv\\Utils\\Db\\Migration\\Schema;\n\nreturn new class {\n    public function up(PDO \$db): void {\n        Schema::create(\$db, '{$table}', function (Blueprint \$table): void {\n            \$table->id();\n            \$table->timestamps();\n        });\n    }\n\n    public function down(PDO \$db): void {\n        Schema::dropIfExists(\$db, '{$table}');\n    }\n};\n";
         } else {
-            $stub = "<?php\n\nreturn new class {\n    public function up(PDO \$db): void {\n        // \$db->exec(\"...\");\n    }\n\n    public function down(PDO \$db): void {\n        // \$db->exec(\"...\");\n    }\n};\n";
+            $stub = "<?php\n\nuse Savv\\Utils\\Db\\Migration\\Blueprint;\nuse Savv\\Utils\\Db\\Migration\\Schema;\n\nreturn new class {\n    public function up(PDO \$db): void {\n        // Schema::create(\$db, 'table_name', function (Blueprint \$table): void {\n        //     \$table->id();\n        //     \$table->timestamps();\n        // });\n    }\n\n    public function down(PDO \$db): void {\n        // Schema::dropIfExists(\$db, 'table_name');\n    }\n};\n";
         }
 
         file_put_contents($fullPath, $stub);

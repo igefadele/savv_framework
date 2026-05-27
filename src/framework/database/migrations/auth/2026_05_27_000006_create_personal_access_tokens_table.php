@@ -1,25 +1,25 @@
 <?php
 
+use Savv\Utils\Db\Migration\Blueprint;
+use Savv\Utils\Db\Migration\Schema;
+
 return new class {
     public function up(\PDO $db): void
     {
-        $db->exec("
-            CREATE TABLE IF NOT EXISTS `personal_access_tokens` (
-                `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                `tokenable_type` VARCHAR(255) NOT NULL,
-                `tokenable_id` BIGINT UNSIGNED NOT NULL,
-                `name` VARCHAR(255) NOT NULL,
-                `token` VARCHAR(64) NOT NULL UNIQUE,
-                `last_used_at` TIMESTAMP NULL,
-                `created_at` TIMESTAMP NULL,
-                `updated_at` TIMESTAMP NULL,
-                INDEX `tokens_tokenable_index` (`tokenable_id`, `tokenable_type`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-        ");
+        Schema::create($db, 'personal_access_tokens', function (Blueprint $table): void {
+            $table->id();
+            $table->string('tokenable_type');
+            $table->unsignedBigInteger('tokenable_id');
+            $table->string('name');
+            $table->string('token', 64)->unique();
+            $table->timestamp('last_used_at')->nullable();
+            $table->timestamps();
+            $table->index(['tokenable_id', 'tokenable_type'], 'tokens_tokenable_index');
+        });
     }
 
     public function down(\PDO $db): void
     {
-        $db->exec("DROP TABLE IF EXISTS `personal_access_tokens`;");
+        Schema::dropIfExists($db, 'personal_access_tokens');
     }
 };

@@ -1302,6 +1302,8 @@ All queries executed through `SavvDb::query()` — including every query generat
 
 Savv ships with a small migration runner for creating, applying, rolling back, and inspecting database changes from the CLI. Migrations are plain PHP files that return an anonymous class with `up(PDO $db)` and `down(PDO $db)` methods.
 
+For table creation, use the schema builder in `Savv\Utils\Db\Migration\Schema`. It keeps migration files readable while the framework handles the SQL generation internally.
+
 The runner loads migrations from two places:
 
 | Path | Purpose |
@@ -1332,21 +1334,44 @@ Generated files are placed in `database/migrations/`:
 ```php
 <?php
 
+use Savv\Utils\Db\Migration\Blueprint;
+use Savv\Utils\Db\Migration\Schema;
+
 return new class {
     public function up(PDO $db): void {
-        $db->exec("CREATE TABLE orders (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+        Schema::create($db, 'orders', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('user_id');
+            $table->string('status')->default('pending');
+            $table->timestamps();
+            $table->index('user_id');
+        });
     }
 
     public function down(PDO $db): void {
-        $db->exec("DROP TABLE IF EXISTS orders;");
+        Schema::dropIfExists($db, 'orders');
     }
 };
 ```
 
 Use `up()` for the forward change and `down()` for the rollback path.
+
+Common blueprint helpers include:
+
+| Helper | Example |
+|--------|---------|
+| `id()` | `$table->id();` |
+| `string()` | `$table->string('email')->unique();` |
+| `text()` | `$table->text('body')->nullable();` |
+| `integer()` | `$table->integer('sort_order')->default(0);` |
+| `unsignedBigInteger()` | `$table->unsignedBigInteger('user_id');` |
+| `boolean()` | `$table->boolean('is_active')->default(true);` |
+| `timestamp()` | `$table->timestamp('last_seen_at')->nullable();` |
+| `timestamps()` | `$table->timestamps();` |
+| `primary()` | `$table->primary(['role_id', 'permission_id']);` |
+| `index()` | `$table->index(['model_id', 'model_type']);` |
+| `unique()` | `$table->unique(['email']);` |
+| `foreign()` | `$table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();` |
 
 ---
 
