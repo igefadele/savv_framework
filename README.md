@@ -1298,6 +1298,151 @@ All queries executed through `SavvDb::query()` — including every query generat
 
 ---
 
+## Database Migrations
+
+Savv ships with a small migration runner for creating, applying, rolling back, and inspecting database changes from the CLI. Migrations are plain PHP files that return an anonymous class with `up(PDO $db)` and `down(PDO $db)` methods.
+
+The runner loads migrations from two places:
+
+| Path | Purpose |
+|------|---------|
+| `src/framework/database/migrations/` | Framework migrations, such as auth tables. |
+| `database/migrations/` | Application migrations created by your project. |
+
+When you run `php savv migrate`, Savv scans both locations, runs pending migrations in filename order, and records them in the `migrations` table with a batch number. Rollbacks use that table to reverse the most recent batch.
+
+---
+
+### Creating Migrations
+
+Create an empty migration:
+
+```bash
+php savv make:migration create_orders_table
+```
+
+Create a table migration stub:
+
+```bash
+php savv make:migration create_orders_table --table=orders
+```
+
+Generated files are placed in `database/migrations/`:
+
+```php
+<?php
+
+return new class {
+    public function up(PDO $db): void {
+        $db->exec("CREATE TABLE orders (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+    }
+
+    public function down(PDO $db): void {
+        $db->exec("DROP TABLE IF EXISTS orders;");
+    }
+};
+```
+
+Use `up()` for the forward change and `down()` for the rollback path.
+
+---
+
+### Running Migrations
+
+Run all pending framework and app migrations:
+
+```bash
+php savv migrate
+```
+
+Check migration state:
+
+```bash
+php savv migrate:status
+```
+
+Rollback the latest batch:
+
+```bash
+php savv migrate:rollback
+```
+
+Rollback every recorded migration:
+
+```bash
+php savv migrate:reset
+```
+
+Rollback everything, then run all migrations again:
+
+```bash
+php savv migrate:refresh
+```
+
+Drop all database tables, then run all migrations again:
+
+```bash
+php savv migrate:fresh
+```
+
+Drop all database tables without re-running migrations:
+
+```bash
+php savv db:wipe
+```
+
+`migrate:reset`, `migrate:refresh`, `migrate:fresh`, and `db:wipe` are destructive. When `APP_ENV=production` or `ENVIRONMENT=production`, Savv requires `--force`:
+
+```bash
+php savv migrate:fresh --force
+```
+
+---
+
+### Seeders
+
+Run the default seeder at `database/seeders/DatabaseSeeder.php`:
+
+```bash
+php savv db:seed
+```
+
+Run a specific seeder file from `database/seeders/`:
+
+```bash
+php savv db:seed --class=UserSeeder
+```
+
+Seeder files return an object with a `run(PDO $db)` method:
+
+```php
+<?php
+
+return new class {
+    public function run(PDO $db): void {
+        $db->prepare("INSERT INTO users (email) VALUES (?)")
+            ->execute(['admin@example.com']);
+    }
+};
+```
+
+---
+
+### Monitoring
+
+Inspect basic database diagnostics:
+
+```bash
+php savv db:monitor
+```
+
+This prints active MySQL connection count and a table-size summary for the current database.
+
+---
+
 ## Auth
 
 Savv includes a lightweight authentication and authorization layer inspired by Auth.js-style guards and Spatie-style roles and permissions. It is designed to work directly with Savv's database layer and your own application models, while staying flexible enough for multi-role, multi-guard, and tenant-scoped applications.
@@ -1351,7 +1496,7 @@ class DatabaseUserProvider implements UserProvider
     public function retrieveByToken(string $token): ?Authenticatable
     {
         $record = savvQuery('personal_access_tokens')
-            ->where('token', $token)
+            ->where('token', '=', $token)
             ->first();
 
         return $record ? \App\Models\User::find($record['tokenable_id']) : null;
@@ -1475,7 +1620,7 @@ $auth = new AuthManager(config('auth'), new \App\Providers\DatabaseUserProvider(
 
 ### Roles and Permissions
 
-Run the auth migration in `src/framework/database/migrations/auth/savv_roles_permissions.sql` to create the default role, permission, pivot, and personal access token tables.
+Run `php savv migrate` to create the default role, permission, pivot, and personal access token tables. Savv loads the framework migrations in `src/framework/database/migrations/` alongside your app migrations in `database/migrations/`, so auth tables are applied under the hood and can be rolled back one migration at a time.
 
 The `HasPermissions` trait supports direct permissions, role-inherited permissions, multiple roles, and guard-aware checks:
 

@@ -58,7 +58,7 @@ class SavvQuery {
 
     public function where(string $column, mixed $operator = '=', mixed $value = null): self {
         // If only 2 args passed: where('id', 5) -> treat as where('id', '=', 5)
-        if ($value === null && !is_string($operator)) {
+        if (func_num_args() === 2) {
             $value = $operator;
             $operator = '=';
         }

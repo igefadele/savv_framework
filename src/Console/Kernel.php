@@ -2,7 +2,10 @@
 namespace Savv\Console;
 
 use Savv\Console\Commands\{RouteCache, MakeConfig, MakeController, BusWorkCommand};
-use Savv\Console\Commands\{CachePost, CacheAllPosts, CachePage, CacheAllPages, SyncPost, SyncAllPosts, OptimizeCommand};
+use Savv\Console\Commands\{
+    CachePost, CacheAllPosts, CachePage, CacheAllPages, SyncPost, 
+    SyncAllPosts, OptimizeCommand, DbCommand
+};
 
 class Kernel
 {
@@ -21,7 +24,21 @@ class Kernel
         'cache:pages'     => CacheAllPages::class,
         'sync:post'       => SyncPost::class,
         'sync:posts'      => SyncAllPosts::class, 
-        'optimize'        => OptimizeCommand::class, 
+        'optimize'        => OptimizeCommand::class,
+
+        'db:seed'         => DbCommand::class,
+        'db:monitor'      => DbCommand::class,
+        'db:wipe'         => DbCommand::class,
+        
+        'make:migration'  => DbCommand::class,
+        'migrate'         => DbCommand::class,
+        'migrate:rollback'  => DbCommand::class,
+        'migrate:status'    => DbCommand::class,
+        'migrate:reset'     => DbCommand::class,
+        'migrate:refresh'   => DbCommand::class,
+        'migrate:fresh'     => DbCommand::class,
+        
+        
     ];
 
     /**
@@ -39,6 +56,11 @@ class Kernel
 
         $class = $this->commands[$commandName];
         $command = new $class();
+
+        if ($command instanceof DbCommand) {
+            $command->execute(array_merge([$commandName], array_slice($args, 2)));
+            return;
+        }
         
         // Pass all arguments after the command name
         $command->execute(array_slice($args, 2));
