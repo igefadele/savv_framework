@@ -6,6 +6,23 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [2.6.0-alpha] - 2026-05-27
+
+### Added
+
+- **Authentication System** - Complete AUTH system with `AuthManager`, `SessionGuard`, `TokenGuard`, `Gate`, and `Authenticable` contracts. Includes `HasPermissions` trait for role and permission management.
+- **Authentication Middleware** - New `AuthenticateMiddleware` for protecting routes with user authentication checks.
+- **Database Migrations** - Full migration system with `MigrationRunner`, `Blueprint`, `ColumnDefinition`, `ForeignKeyDefinition`, and `Schema` classes for database schema management.
+- **Auth Database Tables** - Pre-configured migrations for roles, permissions, role_has_permissions, model_has_roles, model_has_permissions, and personal_access_tokens tables.
+- **Request Auth Methods** - New `user()`, `isAuthenticated()`, and `can()` methods added to `Request` class for easy auth access.
+
+### Updated
+
+- **Console Kernel** - Enhanced with `DbCommand` for running migrations (`migrate`, `migrate:rollback`, `migrate:refresh`, `migrate:reset`, `migrate:status`).
+- **AppProvider** - Updated to support auth-related service registration.
+
+---
+
 ## [2.5.4] - 2026-05-06
 
 ### Updated
