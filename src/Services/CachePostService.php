@@ -187,36 +187,62 @@ class CachePostService
         }
     }
 
+    
     /** 
-     * Create the configs/posts.php file based on the markdown files in the posts/ directory
-    */
+     * Create the configs/posts.php file based on the markdown files recursively.
+     * Enforces double quotes around metadata values to handle apostrophes seamlessly.
+     */
     public static function syncAllPosts(): string {
-        $postFiles = glob(post_path('/*.md'));
+        $baseDir = post_path(); 
         $manifest = [];
 
-        foreach ($postFiles as $file) {
-            $manifest = self::addMetaToPostArrayConfig($file, $manifest);
+        if (!is_dir($baseDir)) {
+            return "Error: Posts directory does not exist at " . $baseDir;
+        }
+
+        $directory = new \RecursiveDirectoryIterator($baseDir, \RecursiveDirectoryIterator::SKIP_DOTS);
+        $iterator = new \RecursiveIteratorIterator($directory);
+
+        foreach ($iterator as $fileInfo) {
+            if ($fileInfo->isFile() && $fileInfo->getExtension() === 'md') {
+                $filePath = $fileInfo->getRealPath();
+                $manifest = self::addMetaToPostArrayConfig($filePath, $manifest);
+            }
         }
 
         // Sort by created_at DESC before saving
         uasort($manifest, fn($a, $b) => strtotime($b['created_at']) <=> strtotime($a['created_at']));
-        $content = "<?php\n\n// Generated for Savv Framework - " . date('Y-m-d H:i:s') . "\nreturn " . var_export($manifest, true) . ";";
+        
+        // Generate the base code via var_export
+        $exported = var_export($manifest, true);
+
+        // Convert array string values from single quotes to double quotes securely
+        // Matches values starting with ' and ending with ', keeping nested characters intact
+        $exportedWithDoubleQuotes = preg_replace_callback("/'([^'\\\\]*(?:\\\\.[^'\\\\]*)*)'/", function($matches) {
+            // Strip out single quote escape slashes, escape double quotes, wrap in clean double quotes
+            $cleanContent = str_replace(["\\'", '"'], ["'", '\\"'], $matches[1]);
+            return '"' . $cleanContent . '"';
+        }, $exported);
+
+        // Make the array pointer formatting to match clean double quote style definitions
+        $exportedWithDoubleQuotes = preg_replace("/\"([a-zA-Z0-9_\-]+)\" =>/", "'$1' =>", $exportedWithDoubleQuotes);
+
+        $content = "<?php\n\n// Generated for Savv Framework - " . date('Y-m-d H:i:s') . "\nreturn " . $exportedWithDoubleQuotes . ";";
         
         $configPath = ROOT_PATH . '/configs/posts.php';
         if (file_put_contents($configPath, $content)) {
-            return "Successfully synced " . count($manifest) . " posts to config.";
+            return "Successfully synced " . count($manifest) . " posts to config with double quotes.";
         } else {
             return "Failed to write posts config.";
         }
-    } 
+    }
+
 
 
     /** 
-     * Add the metadata of a post markdown file to the posts.php config array manifest which is used to generate the posts.php config file in the syncAllPosts method
-     * This is used to build the manifest array with all the posts metadata before writing the posts.php config file in the syncAllPosts method
-     * It takes the post markdown file path and the manifest array as parameters, extracts the metadata from the markdown file, and adds it to the manifest
-    */
-
+     * Add the metadata of a post markdown file to the posts.php config array manifest.
+     * Preserves absolute system file paths while protecting slugs from nested collisions.
+     */
     public static function addMetaToPostArrayConfig(string $file, array $manifest = []): array {
         $data = self::splitPostMdData($file); 
         $meta = $data['metadata'];
@@ -225,24 +251,42 @@ class CachePostService
         $fileCreated = date("Y-m-d H:i:s", filectime($file));
         $fileUpdated = date("Y-m-d H:i:s", filemtime($file));
 
-        $slug = $meta['slug'] ?? strtolower(str_replace(' ', '-', basename($file, '.md')));
+        // 1. Calculate relative folder structure to safely isolate slugs and categories
+        $baseDir = realpath(post_path());
+        $realFile = realpath($file);
+        $relativeDir = '';
         
+        if ($baseDir && $realFile && str_starts_with($realFile, $baseDir)) {
+            $subPath = ltrim(substr($realFile, strlen($baseDir)), DIRECTORY_SEPARATOR);
+            $dirPart = dirname($subPath);
+            $relativeDir = ($dirPart === '.') ? '' : $dirPart . '/';
+        }
+
+        // 2. Generate unique slug combining relative folder depth if metadata slug is absent
+        if (isset($meta['slug'])) {
+            $slug = ltrim($meta['slug'], '/');
+        } else {
+            $filenamePart = strtolower(str_replace(' ', '-', basename($file, '.md')));
+            $slug = strtolower(str_replace('\\', '/', $relativeDir)) . $filenamePart;
+        }
+
         $manifest[$slug] = [
-            'slug'      => $slug,
-            'title'     => $meta['title'] ?? basename($file, '.md'),
-            'path'      => $file,
-            'created_at' => isset($meta['date']) ? $meta['date'] . " 00:00:00" : $fileCreated,
-            'updated_at' => $fileUpdated,
-            'author'    => $meta['author'] ?? 'Admin',
-            'category'  => $meta['category'] ?? 'General',
-            'tags'      => $meta['tags'] ?? "",
-            'excerpt'   => $meta['excerpt'] ?? "" ,
-            'keyphrase' => $meta['keyphrase'] ?? "",
+            'slug'           => $slug,
+            'title'          => $meta['title'] ?? basename($file, '.md'),
+            'path'           => $file, // Kept as the exact, raw, absolute system path
+            'created_at'     => isset($meta['date']) ? $meta['date'] . " 00:00:00" : $fileCreated,
+            'updated_at'     => $fileUpdated,
+            'author'         => $meta['author'] ?? 'Admin',
+            'category'       => $meta['category'] ?? (empty($relativeDir) ? 'General' : ucwords(str_replace('/', ' > ', rtrim($relativeDir, '/')))),
+            'tags'           => $meta['tags'] ?? "",
+            'excerpt'        => $meta['excerpt'] ?? "",
+            'keyphrase'      => $meta['keyphrase'] ?? "",
             'featured_image' => $meta['featured_image'] ?? asset('/images/logos/logo.png'),
         ];
 
         return $manifest;
     }
+
 
 
     /** 

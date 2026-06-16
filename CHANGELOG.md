@@ -5,6 +5,10 @@ All notable changes to the Savv Web Framework are documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+## [2.6.0] - 2026-006-16
+
+### Updated
+- **CachePostService** - Make posts markdown files be fetched recursively so that posts inside subdirectories can be fetched and synced no matter how deep the directory level it's placed.
 
 ## [2.6.0-alpha] - 2026-05-27
 
