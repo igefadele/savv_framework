@@ -264,7 +264,8 @@ class CachePostService
 
         // 2. Generate unique slug combining relative folder depth if metadata slug is absent
         if (isset($meta['slug'])) {
-            $slug = ltrim($meta['slug'], '/');
+            $slugFromMeta = ltrim($meta['slug'], '/');
+            $slug = (empty($relativeDir)) ? $slugFromMeta : $relativeDir . $slugFromMeta;
         } else {
             $filenamePart = strtolower(str_replace(' ', '-', basename($file, '.md')));
             $slug = strtolower(str_replace('\\', '/', $relativeDir)) . $filenamePart;
