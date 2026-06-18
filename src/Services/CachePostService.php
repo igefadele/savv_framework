@@ -187,7 +187,7 @@ class CachePostService
         }
     }
 
-    
+
     /** 
      * Create the configs/posts.php file based on the markdown files recursively.
      * Enforces double quotes around metadata values to handle apostrophes seamlessly.
@@ -266,6 +266,7 @@ class CachePostService
         if (isset($meta['slug'])) {
             $slugFromMeta = ltrim($meta['slug'], '/');
             $slug = (empty($relativeDir)) ? $slugFromMeta : $relativeDir . $slugFromMeta;
+
         } else {
             $filenamePart = strtolower(str_replace(' ', '-', basename($file, '.md')));
             $slug = strtolower(str_replace('\\', '/', $relativeDir)) . $filenamePart;
@@ -292,11 +293,11 @@ class CachePostService
 
     /** 
      * Generate the post cache html files inside /storage/framework/posts
-    */
+     * Dynamically creates any deep subdirectory structures before saving the file.
+     */
     public static function cachePost(string $slug): string {
         $cachePath = ROOT_PATH . "/storage/framework/posts";
-        if (!is_dir($cachePath)) mkdir($cachePath, 0777, true);
-
+        
         $postData = self::getPostData($slug);
         if (empty($postData)) abort(404, 'Post not found');
 
@@ -317,6 +318,13 @@ class CachePostService
         }
 
         $filename = $cachePath . DIRECTORY_SEPARATOR . $slug . '.html';
+        $targetDir = dirname($filename);
+
+        if (!is_dir($targetDir)) {
+            mkdir($targetDir, 0777, true); 
+        }
+        
+        logger("Caching: " . $filename);
         $dataToPut = "<!-- SavvBlog Cache: " . date('Y-m-d H:i:s') . " -->\n" . $html;
 
         if (file_put_contents($filename, $dataToPut)){
@@ -325,6 +333,7 @@ class CachePostService
 
         return "Error, post not cached"; 
     }
+
 
     /** 
      * 
