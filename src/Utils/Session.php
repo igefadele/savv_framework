@@ -57,4 +57,12 @@ class Session
         $this->remove("_flash_$key");
         return $data;
     }
+
+    public static function resetInstance(): void
+    {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+        self::$instance = null;
+    }
 }

@@ -2,42 +2,56 @@
 namespace Savv\Core;
 
 use Savv\Utils\Router;
-use Savv\Utils\Request;
+use Savv\Utils\{Session, Request};
+use Savv\Utils\Auth\{AuthManager};
+use Savv\Utils\Db\SavvCache;
+use Savv\Utils\Db\SavvEvent;
 
 class Application {
     protected $redis = null;
 
-    public static function bootstrap(string $rootPath, string $publicPath = null) {
-        if (!defined('ROOT_PATH')) define('ROOT_PATH', $rootPath);
+    public static function bootstrap(string $rootPath, ?string $publicPath = null): self
+    {
+        if (!defined('ROOT_PATH'))  define('ROOT_PATH', $rootPath);
         if (!defined('PUBLIC_PATH')) define('PUBLIC_PATH', $publicPath ?? $rootPath);
 
-        // Load .env
         if (file_exists(ROOT_PATH . '/.env')) {
             \Dotenv\Dotenv::createImmutable(ROOT_PATH)->load();
         }
 
-        return new self();
+        $app = new self();
+        $app->persistEnvironmentPaths(); // Persist paths so the CLI knows where the app lives
+        $app->ensureCliBinaryExists(); // Ensure the CLI binary is available
+        $app->configureDatabase(); // Configure Database (if applicable)
+        $app->initBusAndObserver(); // Bus Init
+        $app->loadRoutes();          // Load routes once
+
+        return $app;
     }
 
-    public function run() {
-        // 1. Persist paths so the CLI knows where the app lives
-        $this->persistEnvironmentPaths();
 
-        // 2. Ensure the CLI binary is available
-        $this->ensureCliBinaryExists();
+    public function run(): void
+    {
+        // Per-request state resets
+        SavvCache::flush();
+        SavvEvent::flush();
+        AuthManager::forgetResolvedInstance();
+        Session::resetInstance(); 
 
-        // 3. Configure Database (if applicable)
-        $this->configureDatabase(); 
+        // Dispatch
+        $request = Request::capture();
+        $handled = Router::getInstance()->dispatch($request);
 
-        // Bus Init
-        $this->initBusAndObserver();
-
-        $this->loadRouter(); 
+        if (!$handled) {
+            $this->handleExternalFallbacks();
+        }
     }
 
-    protected function loadRouter() {
+
+    private function loadRoutes(): void
+    {
         $cacheFile = ROOT_PATH . '/storage/framework/routes.php';
-        $router = Router::getInstance();
+        $router    = Router::getInstance();
 
         if (file_exists($cacheFile)) {
             $router->loadRawRoutes(require $cacheFile);
@@ -45,13 +59,6 @@ class Application {
             // Load user route files and redirections config from their project directory
             $router->loadRouteFiles();
             $router->registerRedirections();
-        } 
-
-        $request = Request::capture();
-        $handled = Router::getInstance()->dispatch($request);
-
-        if (!$handled) {
-            $this->handleExternalFallbacks();
         }
     }
 

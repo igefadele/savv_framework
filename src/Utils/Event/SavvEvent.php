@@ -16,4 +16,8 @@ class SavvEvent {
         }
         return true;
     }
+
+    public static function flush(): void {
+        self::$listeners = [];
+    }
 }

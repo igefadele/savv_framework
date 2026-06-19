@@ -16,7 +16,8 @@
         "predis/predis": "^3.4"
     },
     "suggest": {
-        "predis/predis": "Required to use the Service Bus if the native php-redis extension is not installed."
+        "predis/predis": "Required to use the Service Bus if the native php-redis extension is not installed.",
+        "runtime/frankenphp-symfony": "Required for FrankenPHP worker mode (persistent PHP server)"
     },
     "autoload": {
         "psr-4": {
