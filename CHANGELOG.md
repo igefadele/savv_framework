@@ -5,6 +5,12 @@ All notable changes to the Savv Web Framework are documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
+
+## [2.6.0] - 2026-006-18
+
+- **DB Migration** - Stabilised
+
+
 ## [2.6.0-beta] - 2026-006-18
 
 ### Added
