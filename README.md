@@ -1508,17 +1508,17 @@ Your provider is responsible for retrieving users from storage and validating cr
 ```php
 namespace App\Providers;
 
-use Savv\Utils\Auth\Contracts\Authenticatable;
+use Savv\Utils\Auth\Contracts\Authenticable;
 use Savv\Utils\Auth\Contracts\UserProvider;
 
 class DatabaseUserProvider implements UserProvider
 {
-    public function retrieveById(int|string $id): ?Authenticatable
+    public function retrieveById(int|string $id): ?Authenticable
     {
         return \App\Models\User::find($id);
     }
 
-    public function retrieveByToken(string $token): ?Authenticatable
+    public function retrieveByToken(string $token): ?Authenticable
     {
         $record = savvQuery('personal_access_tokens')
             ->where('token', '=', $token)
@@ -1527,14 +1527,14 @@ class DatabaseUserProvider implements UserProvider
         return $record ? \App\Models\User::find($record['tokenable_id']) : null;
     }
 
-    public function retrieveByCredentials(array $credentials): ?Authenticatable
+    public function retrieveByCredentials(array $credentials): ?Authenticable
     {
         return \App\Models\User::query()
             ->where('email', '=', $credentials['email'] ?? '')
             ->first();
     }
 
-    public function validateCredentials(Authenticatable $user, array $credentials): bool
+    public function validateCredentials(Authenticable $user, array $credentials): bool
     {
         return password_verify($credentials['password'] ?? '', $user->getAuthPassword());
     }
@@ -1545,19 +1545,19 @@ class DatabaseUserProvider implements UserProvider
 
 ---
 
-### Authenticatable Models
+### Authenticable Models
 
-Your user model should implement `Authenticatable` and use `HasPermissions`:
+Your user model should implement `Authenticable` and use `HasPermissions`:
 
 ```php
 namespace App\Models;
 
 use PDO;
-use Savv\Utils\Auth\Contracts\Authenticatable;
+use Savv\Utils\Auth\Contracts\Authenticable;
 use Savv\Utils\Auth\Traits\HasPermissions;
 use Savv\Utils\Db\SavvModel;
 
-class User extends SavvModel implements Authenticatable
+class User extends SavvModel implements Authenticable
 {
     use HasPermissions;
 

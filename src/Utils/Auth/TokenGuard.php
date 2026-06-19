@@ -2,7 +2,7 @@
 
 namespace Savv\Utils\Auth;
 
-use Savv\Utils\Auth\Contracts\Authenticatable;
+use Savv\Utils\Auth\Contracts\Authenticable;
 use Savv\Utils\Auth\Contracts\Guard;
 use Savv\Utils\Auth\Contracts\UserProvider;
 
@@ -10,7 +10,7 @@ use Savv\Utils\Auth\Contracts\UserProvider;
  * Token Guard: API-based authentication (Bearer Tokens).
  */
 class TokenGuard implements Guard {
-    protected ?Authenticatable $user = null;
+    protected ?Authenticable $user = null;
     protected UserProvider $provider;
     protected string $inputKey = 'Authorization';
 
@@ -18,7 +18,7 @@ class TokenGuard implements Guard {
         $this->provider = $provider;
     }
 
-    public function user(): ?Authenticatable {
+    public function user(): ?Authenticable {
         if ($this->user !== null) return $this->user;
 
         // Extract token from Bearer Header
@@ -35,6 +35,6 @@ class TokenGuard implements Guard {
     }
 
     public function validate(array $credentials): bool { return false; } // Tokens are usually pre-validated
-    public function login(Authenticatable $user): void {} // Stateless
+    public function login(Authenticable $user): void {} // Stateless
     public function logout(): void {} // Stateless
 }

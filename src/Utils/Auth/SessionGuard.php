@@ -2,7 +2,7 @@
 
 namespace Savv\Utils\Auth;
 
-use Savv\Utils\Auth\Contracts\Authenticatable;
+use Savv\Utils\Auth\Contracts\Authenticable;
 use Savv\Utils\Auth\Contracts\Guard;
 use Savv\Utils\Auth\Contracts\UserProvider;
 
@@ -10,7 +10,7 @@ use Savv\Utils\Auth\Contracts\UserProvider;
  * Session Guard: Traditional web-based authentication.
  */
 class SessionGuard implements Guard {
-    protected ?Authenticatable $user = null;
+    protected ?Authenticable $user = null;
     protected string $name;
     protected UserProvider $provider;
 
@@ -19,7 +19,7 @@ class SessionGuard implements Guard {
         $this->provider = $provider;
     }
 
-    public function user(): ?Authenticatable {
+    public function user(): ?Authenticable {
         if ($this->user !== null) return $this->user;
 
         $id = $_SESSION["savv_auth_{$this->name}"] ?? null;
@@ -38,7 +38,7 @@ class SessionGuard implements Guard {
         return $user && $this->provider->validateCredentials($user, $credentials);
     }
 
-    public function login(Authenticatable $user): void {
+    public function login(Authenticable $user): void {
         $_SESSION["savv_auth_{$this->name}"] = $user->getAuthId();
         $this->user = $user;
     }
