@@ -1,11 +1,12 @@
-<?php
-namespace Savv\Console\Commands;
+<?php 
+
+namespace Savv\Services;
 
 use Savv\Utils\Router;
 
-class RouteCache
+class CacheRouteService 
 {
-    public function execute($args = null)
+    static public function cacheAllRoutes($args = null)
     {
         echo "Starting route compilation...\n";
 
@@ -17,13 +18,13 @@ class RouteCache
         $router->loadRouteFiles();
 
         // 3. Scan views/ directory for Dynamic Routes
-        $this->compilePagesRoutes($router);
+        self::compilePagesRoutes($router);
 
         // 4. Load Redirections
-        $this->compileRedirectionsRoutes($router);
+        self::compileRedirectionsRoutes($router);
 
         // 5. Load Posts Config Discovery
-        $this->compilePostsRoutes($router);
+        self::compilePostsRoutes($router);
 
         // 6. Save to Storage
         $cachePath = ROOT_PATH . '/storage/framework/routes.php';
@@ -37,7 +38,7 @@ class RouteCache
         echo "Success: Manifest saved to {$cachePath}\n";
     }
 
-    protected function compilePagesRoutes(Router $router) {
+    static public function compilePagesRoutes(Router $router) {
         $viewDir = ROOT_PATH . '/views/pages';
         if (!is_dir($viewDir)) return;
 
@@ -58,7 +59,7 @@ class RouteCache
         }
     }
 
-    protected function compileRedirectionsRoutes(Router $router) {
+    static public function compileRedirectionsRoutes(Router $router) {
         $redirects = config('redirections') ?? [];  
         foreach ($redirects as $slug => $target) {
             // A marker that tells the Router this is a redirection
@@ -70,7 +71,7 @@ class RouteCache
         }
     }
 
-    protected function compilePostsRoutes(Router $router) {
+    static public function compilePostsRoutes(Router $router) {
         $posts = config('posts') ?? [];  
         foreach ($posts as $slug => $postData) { 
             // We register the slug as a top-level route

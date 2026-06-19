@@ -2,8 +2,7 @@
 
 namespace Savv\Controllers;
 
-use Savv\Services\{CachePostService, CachePageService};
-use Savv\Console\Commands\RouteCache;
+use Savv\Services\{CacheService, CachePostService, CachePageService, CacheClearService, CacheRouteService};
 
 class CacheController {
     
@@ -15,24 +14,26 @@ class CacheController {
      * and also creates the synced posts array inside /configs/posts.php
      */
     public function optimize() {
-        echo "Optimizing Savv Application...\n";
-        echo "Caching all routes...\n";
-        (new RouteCache)->execute();
-        echo "Caching all pages...\n";
-        echo CachePageService::cacheAllPages() . "\n";
-        echo "Syncing all posts...\n";
-        echo CachePostService::syncAllPosts() . "\n";
-        echo "Caching all posts...\n";
-        echo CachePostService::cacheAllPosts() . "\n";
-        echo "Optimization complete!\n";
-        exit; 
+        CacheService::optimize();
+    }
+
+    public function clearCaches() {
+        CacheService::clearCaches();
     }
 
     /**
      * Cache all routes and create the cached array record inside /storage/framework/routes.php 
      */
     public function cacheRoutes() {
-        (new RouteCache())->execute();
+        CacheRouteService::cacheAllRoutes();
+        exit;
+    }
+
+    public function clearRoutes() {
+        $baseCachePath = ROOT_PATH . '/storage/framework';
+        echo "Removing compiled routes layout map...\n";
+        CacheClearService::deleteFile($baseCachePath . '/routes.php');        
+        echo "\e[32mSuccessfully cleared storage/framework/routes.php.\e[0m\n";
         exit;
     }
     
@@ -62,6 +63,14 @@ class CacheController {
         exit;
     }
 
+    public function clearPost() {
+        $baseCachePath = ROOT_PATH . '/storage/framework';
+        echo "Clearing global framework cache storage...\n";
+        CacheClearService::clearDirectory($baseCachePath, false); // Keeps core base folder, clears elements inside
+        echo "\e[32mSuccessfully cleared storage/framework/** contents.\e[0m\n";
+        exit;
+    }
+
     /**
      * Cache all posts and create corresponding html files inside /storage/framework/posts 
      */
@@ -69,6 +78,14 @@ class CacheController {
         echo CachePostService::cacheAllPosts();
         exit;
     } 
+
+    public function clearAllPosts() {
+        $baseCachePath = ROOT_PATH . '/storage/framework';
+        echo "Clearing posts cache...\n";
+        CacheClearService::clearDirectory($baseCachePath . '/posts', true);
+        echo "\e[32mSuccessfully removed posts cache folder hierarchy.\e[0m\n";
+        exit;
+    }
 
     /**
      * Cache a page and create corresponding html file inside /storage/framework/pages
@@ -78,12 +95,28 @@ class CacheController {
         echo CachePageService::cachePage($uri);
         exit;
     }
+
+    public function clearPage() {
+        $baseCachePath = ROOT_PATH . '/storage/framework';
+        echo "Clearing global framework cache storage...\n";
+        CacheClearService::clearDirectory($baseCachePath, false); // Keeps core base folder, clears elements inside
+        echo "\e[32mSuccessfully cleared storage/framework/** contents.\e[0m\n";
+        exit;
+    }
     
     /**
      * Cache all pages and create corresponding html files inside /storage/framework/pages 
      */
     public function cacheAllPages() {
         echo CachePageService::cacheAllPages();
+        exit;
+    }
+
+    public function clearAllPages() {
+        $baseCachePath = ROOT_PATH . '/storage/framework';
+        echo "Clearing pages cache...\n";
+        CacheClearService::clearDirectory($baseCachePath . '/pages', true);
+        echo "\e[32mSuccessfully removed pages cache folder hierarchy.\e[0m\n";
         exit;
     }
 }

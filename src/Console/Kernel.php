@@ -1,11 +1,8 @@
 <?php
 namespace Savv\Console;
 
-use Savv\Console\Commands\{RouteCache, MakeConfig, MakeController, BusWorkCommand};
-use Savv\Console\Commands\{
-    CachePost, CacheAllPosts, CachePage, CacheAllPages, SyncPost, 
-    SyncAllPosts, OptimizeCommand, DbCommand
-};
+use Savv\Console\Commands\{MakeConfig, MakeController, BusWorkCommand};
+use Savv\Console\Commands\{DbCommand, CacheCommand, ClearCacheCommand};
 
 class Kernel
 {
@@ -13,32 +10,39 @@ class Kernel
      * The framework's command registry.
      */
     protected array $commands = [
-        'make:controller' => MakeController::class,
-        'make:config'     => MakeConfig::class, 
-        'bus:work'        => BusWorkCommand::class, // Internal connector
-        'cache:route'     => RouteCache::class,
-        'cache:routes'    => RouteCache::class,
-        'cache:post'      => CachePost::class,
-        'cache:posts'     => CacheAllPosts::class,
-        'cache:page'      => CachePage::class,
-        'cache:pages'     => CacheAllPages::class,
-        'sync:post'       => SyncPost::class,
-        'sync:posts'      => SyncAllPosts::class, 
-        'optimize'        => OptimizeCommand::class,
+        'make:controller'    => MakeController::class,
+        'make:config'        => MakeConfig::class, 
+        'bus:work'           => BusWorkCommand::class, // Internal connector
 
-        'db:seed'         => DbCommand::class,
-        'db:monitor'      => DbCommand::class,
-        'db:wipe'         => DbCommand::class,
+        'db:seed'            => DbCommand::class,
+        'db:monitor'         => DbCommand::class,
+        'db:wipe'            => DbCommand::class,
         
-        'make:migration'  => DbCommand::class,
-        'migrate'         => DbCommand::class,
-        'migrate:rollback'  => DbCommand::class,
-        'migrate:status'    => DbCommand::class,
-        'migrate:reset'     => DbCommand::class,
-        'migrate:refresh'   => DbCommand::class,
-        'migrate:fresh'     => DbCommand::class,
-        
-        
+        'make:migration'     => DbCommand::class,
+        'migrate'            => DbCommand::class,
+        'migrate:rollback'   => DbCommand::class,
+        'migrate:status'     => DbCommand::class,
+        'migrate:reset'      => DbCommand::class,
+        'migrate:refresh'    => DbCommand::class,
+        'migrate:fresh'      => DbCommand::class,
+
+        'optimize'           => CacheCommand::class,
+        'cache:post'         => CacheCommand::class,
+        'cache:posts'        => CacheCommand::class,
+        'cache:page'         => CacheCommand::class,
+        'cache:pages'        => CacheCommand::class,
+        'cache:route'        => CacheCommand::class,
+        'cache:routes'       => CacheCommand::class,
+        'sync:post'          => CacheCommand::class,
+        'sync:posts'         => CacheCommand::class,  
+
+        'cache:clear'        => ClearCacheCommand::class,
+        'cache:clear:posts'  => ClearCacheCommand::class,
+        'cache:clear:pages'  => ClearCacheCommand::class,
+        'cache:clear:routes' => ClearCacheCommand::class,
+        'cache:clear:post'   => ClearCacheCommand::class,
+        'cache:clear:page'   => ClearCacheCommand::class,
+        'cache:clear:route'  => ClearCacheCommand::class,
     ];
 
     /**
@@ -61,6 +65,11 @@ class Kernel
             $command->execute(array_merge([$commandName], array_slice($args, 2)));
             return;
         }
+
+        if ($command instanceof CacheCommand || $command instanceof ClearCacheCommand) {
+            $command->execute(array_slice($args, 2), $commandName);
+            return;
+        } 
         
         // Pass all arguments after the command name
         $command->execute(array_slice($args, 2));

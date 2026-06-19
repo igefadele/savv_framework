@@ -5,10 +5,19 @@ All notable changes to the Savv Web Framework are documented in this file.
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
-## [2.6.0] - 2026-006-18
+## [2.6.0-beta] - 2026-006-18
+
+### Added
+- **CacheService** - This handles the total optimization and clearing of optimization caches.
+- **CacheClearService** - Handles clearing caches of pages, posts, and routes.
+- **CacheRouteService** - The routes caching logics are moved here.
+- **ClearCacheCommand** - Handles the clearing of optimization caches.
 
 ### Updated
 - **CachePostService** - Make posts markdown files be fetched recursively so that posts inside subdirectories can be fetched and synced no matter how deep the directory level it's placed.
+
+### Removed
+- **RouteCache, OptimizeCommand** - Their logics moved to CacheCommand, ClearCacheCommand.
 
 
 ## [2.6.0-alpha] - 2026-05-27
